@@ -1,0 +1,15 @@
+db: test
+tables:
+    - name: all_type_nullable
+      row_count: 5
+      columns:
+        - name: t_float
+          ndv: 5
+          null_count: 0
+          min: "-24238.533"
+          max: "25398.23"
+        - name: t_null_char
+          ndv: 5
+          null_count: 0
+          min: itaposalob
+          max: ufamularun

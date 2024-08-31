@@ -1,0 +1,18 @@
+# Usage:
+#   # 存算一体
+#   dodo cluster deploy -C deploy.yaml oss://daily-build/doris/master_release_output.tar.gz
+#
+#   # 存算分离
+#   dodo cluster deploy-cloud -C deploy.yaml oss://daily-build/doris/master_release_output.tar.gz
+
+fe: [172.20.56.183]
+be: [172.20.56.186, 172.20.56.185, 172.20.56.184]
+ssh-password: '***' # or: ssh-private-key: '/path/to/id_rsa'
+
+# Optional params:
+# only effective for cloud deployment
+fdb: [172.20.56.183]
+ms: [172.20.56.183]
+# only effective when downloading Doris package from OSS
+oss-access-key: '***'
+oss-secret-key: '***'

@@ -1,0 +1,20 @@
+# dodo dump --config example.dodo.yaml
+
+# FE
+host: 127.0.0.1
+port: 9030
+user: root
+password: '******'
+
+# the catalog to work with
+# catalog: hive_catalog
+
+# the databases and tables to work with (optional)
+dbs: [example]
+# tables:
+#   - table1
+#   - example.table2
+
+# if you want to download the audit log from remote FE (optional)
+# ssh-password: '******'
+# ssh-private-key: '/path/to/private_key'

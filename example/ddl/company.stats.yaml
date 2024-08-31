@@ -1,0 +1,37 @@
+db: company
+tables:
+    - name: employees
+      row_count: 8
+      columns:
+        - name: hire_date
+          ndv: 8
+          null_count: 0
+          data_size: 32
+          avg_size_byte: 4
+          min: "2023-01-15"
+          max: "2023-08-30"
+          method: SAMPLE
+        - name: department_id
+          ndv: 3
+          null_count: 0
+          data_size: 32
+          avg_size_byte: 4
+          min: "10"
+          max: "30"
+          method: SAMPLE
+        - name: employee_id
+          ndv: 8
+          null_count: 0
+          data_size: 32
+          avg_size_byte: 4
+          min: "1"
+          max: "8"
+          method: SAMPLE
+        - name: salary
+          ndv: 7
+          null_count: 0
+          data_size: 64
+          avg_size_byte: 8
+          min: "45000.00"
+          max: "80000.00"
+          method: SAMPLE

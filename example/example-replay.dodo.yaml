@@ -1,0 +1,17 @@
+# dodo replay --config example-replay.dodo.yaml
+
+# FE
+host: 127.0.0.1
+port: 9030
+user: root
+password: '******'
+
+# the databases to replay (optional)
+dbs: [example]
+
+# Replay queries from these users (optional)
+# users: [readonly, root]
+
+# Replay queries from time to time (optional)
+# from: '2024-09-20 00:00:00'
+# to:   '2024-09-20 01:00:00'

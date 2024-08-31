@@ -1,0 +1,218 @@
+######
+# Run:
+#   dodo gendata --dbs company,test --ddl example/ddl --genconf example/gendata.yaml
+######
+
+# Global null frequency
+null_frequency: 0
+
+
+# Global generation rule of types
+type:
+  # set default bigint range to 0 - 100
+  bigint:
+    min: 0
+    max: 100
+  date:
+    min: 1997-02-16
+    max: 2025-06-12
+  jsonb:
+    # set default structure of all jsonb (use MAP or ARRAY is also OK!)
+    structure: 'struct<foo:bigint>'
+    # do not gen NULL for jsonb itself
+    null_frequency: 0
+    fields:
+      # range -1 to 1, 10% NULL
+      - name: foo
+        min: -1
+        max: 1
+        null_frequency: 0.1
+
+
+# tables generation rule
+tables:
+  - name: employees
+    row_count: 10000 # optional, default 1000 (specify by --rows)
+    columns:
+      - name: department_id
+        null_frequency: 0.1 # 10% NULL
+        min: 1
+        max: 10
+      - name: salary
+        min: 15000.00
+        max: 16000.00
+      - name: hire_date
+        min: "1997-01-15"
+        max: "1997-01-15"
+
+  - name: all_type_nullable
+    # row_count: 100
+    columns:
+      - name: t_null_decimal_precision_38
+        precision: 12
+        scale: 3
+        min: 100
+        max: 102 # max is 102.999
+      - name: datetime1
+        min: "1997-01-15"
+        max: "1997-01-15"
+      - name: t_str
+        # All generators can have an optional result format.
+        # The tag (surrounded by {{ and }}) grammer is same as golang's `fmt.Sprintf()`
+        # NOTE: format will return NULL if the generator returns NULL.
+        format: 'substr length 1-5: {{%s}}'
+        length:
+          min: 1
+          max: 5
+        null_frequency: 0.1
+
+
+      ### Custom generator ###
+      ### Will override the gen rules at the column level (expect `null_frequency` and `format`)
+
+      # inc generator
+      - name: t_string
+        format: "string-inc-{{%d}}"
+        # `length` won't work, override by `gen`
+        # length: 10
+        gen:
+          # incrementing from 100 (default 0), step 2 (default 1)
+          inc: 2
+          start: 100
+          end: 200    # Optional, maximum value, loops back to start when exceeded (default no loop)
+
+      # enum generator, enum value can be any literal or a generator
+      - name: t_null_string
+        null_frequency: 0.5
+        format: "What's your name? My name is {{%s}}."
+        gen:
+          # randomly choose one literal value
+          enum: [foo, bar, foobar]
+          weights: [0.2, 0.6, 0.2] # optional, the probabilities of being chosen
+      - name: t_bigint
+        gen:
+          # randomly choose one generator to generate value, each has 25% probability
+          enum:
+            - {min: 0, max: 5}
+            - {min: 5, max: 10}
+            - format: "12"
+            - gen:
+                enum: [1, 2, 3]
+
+      # parts generator, part value can be any literal or a generator, parts must combine with format
+      - name: date1
+        format: "2025-{{%02d}}-{{%02d}}"
+        gen:
+          parts:
+            - gen: # month
+                type: int
+                min: 1
+                max: 12
+            - gen: # day
+                type: int
+                min: 1
+                max: 20
+      - name: t_null_char # char(10)
+        format: "{{%s}}--{{%02d}}"
+        gen:
+          parts:
+            - "prefix"
+            - gen:
+                enum: [2, 4, 6, 8, 10]
+
+      # ref generator
+      - name: t_int
+        # use values from another previously generated table column. Usually handle JOIN.
+        gen:
+          ref: employees.department_id
+          limit: 1000 # randomly choose 1000 values from employees.department_id (default 1000)
+        # you can add a format here if column formats are not the same
+        # format: ""
+
+      # use other type's generator
+      - name: t_varchar2
+        format: "year: {{%d}}, month: 12"
+        gen:
+          type: int
+          min: 1997
+          max: 2097
+      - name: dt_month # type is varchar(6) but use tinyint to generate month
+        format: '2025{{%02d}}'
+        gen:
+          type: tinyint
+          min: 1
+          max: 12
+
+      # Finally, the golang generator
+      - name: t_varchar
+        gen:
+          # Must have a function `func gen() any` in golang code
+          golang: |
+            import "fmt"
+
+            var i int
+            func gen() any {
+                i++
+                return fmt.Sprintf("Is odd: %v.", i%2 == 1)
+            }
+
+
+
+      ### Complex type ###
+      - name: t_map_varchar # map<varchar(255),varchar(255)>
+        key:
+          format: "key-{{%d}}"
+          gen:
+            # default to start from 1, step is 2
+            inc: 2
+        value:
+          length: {min: 20, max: 50}
+
+      - name: t_array_string # array<text>
+        length: {min: 1, max: 10}
+        element:
+          # custom generatot for array element
+          gen:
+            enum: [foo, bar, foobar]
+
+      - name: t_struct_nested # struct<foo:text, struct_field:array<text>>
+        fields:
+          - name: foo
+            length: 3
+          - name: struct_field
+            length: 10
+            element:
+              null_frequency: 0
+              length: 2
+
+      # JSON/JSONB/VARIANT
+      - name: json1
+        structure: |
+          struct<
+            c1: varchar(3),
+            c2: struct<array_field: array<text>>, -- nested complex type (yes, you can write comment here)
+            c3: boolean
+          >
+        fields:
+          # length 1, 0% NULL
+          - name: c1
+            length: 1
+            null_frequency: 0
+          - name: c2 # struct<array_field: array<text>>>
+            fields:
+              - name: array_field
+                length: 1
+                element:
+                  format: "nested array element: {{%s}}"
+                  null_frequency: 0
+                  length: 2
+  - name: sales
+    # row_count: 100
+    columns:
+      - name: employee_id
+        gen:
+          ref: employees.employee_id
+      - name: product_id # int
+        format: "1{{%06d}}"
+        gen:
+          ref: employees.employee_id
