@@ -101,7 +101,7 @@ PROPERTIES (
 );`
 
 	rows := 50
-	tg, err := NewTableGen("create-table.sql", sql, nil, rows)
+	tg, err := NewTableGen("create-table.sql", sql, nil, rows, nil)
 	assert.NoError(t, err)
 	assert.Len(t, tg.colGens, 74)
 

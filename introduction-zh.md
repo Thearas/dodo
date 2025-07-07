@@ -189,6 +189,7 @@ dodo import --tables db1.table1 --data 'my_table/*.csv'
 | JSON/JSONB |  |  | STRUCT<col1:SMALLINT, col2:SMALLINT> |
 | VARIANT |  |  | STRUCT<col1:SMALLINT, col2:SMALLINT> |
 | BITMAP | 5 | element: 0 - MaxInt32 |  |
+| HLL |  | hll_empty() |  |
 | TEXT/STRING/VARCHAR | 1 - 10 |  |  |
 | TINYINT |  | MinInt8 - MaxInt8 |  |
 | SMALLINT |  | MinInt16 - MaxInt16 |  |
@@ -375,6 +376,14 @@ columns:
                   length: 2
     ```
 
+5. 对于 HLL 类型，默认值为 `hll_empty()`，你也可以指定从同一张表的其他列生成：
+
+    ```yaml
+    columns:
+      - name: t_hll # t_hll 的值将为 `hll_hash(t_str)`
+        from: t_str
+    ```
+
 #### gen
 
 可选自定义生成器，支持以下几种，必须在 `gen:` 的下面定义：
@@ -498,7 +507,8 @@ AI 生成时可以传入查询，令生成的数据能被该查询查出来。
 # 从导出的 t1,t2 表生成数据
 dodo gendata --dbs db1 --tables t1,t2 \
     --llm 'deepseek-chat' --llm-api-key 'sk-xxx' \
-    --query 'select * from t1 join t2 on t1.a = t2.b where t1.c IN ("a", "b", "c") and t2.d = 1'
+    --query 'select * from t1 join t2 on t1.a = t2.b where t1.c IN ("a", "b", "c") and t2.d = 1' \
+    --anonymize # 将 SQL 脱敏后再发给 LLM 
 
 # 从任意 create-table 和 query 生成数据
 dodo gendata -C example/usercase/.dodo.yaml --ddl 'example/usercase/ddl/*.sql' --query "$(cat example/usercase/sql/*)"

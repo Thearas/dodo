@@ -21,7 +21,7 @@ const (
 
 type GenRule = gen.GenRule
 
-func NewTableGen(ddlfile, createTableStmt string, stats *TableStats, rows int) (*TableGen, error) {
+func NewTableGen(ddlfile, createTableStmt string, stats *TableStats, rows int, streamloadColNames []string) (*TableGen, error) {
 	// parse create-table statement
 	sqlId := ddlfile
 	if stats != nil {
@@ -66,32 +66,47 @@ func NewTableGen(ddlfile, createTableStmt string, stats *TableStats, rows int) (
 		colGens: make([]gen.Gen, 0, colCount),
 	}
 
-	streamLoadCols := make([]string, 0, len(tg.Columns)) // construct for streamload header `curl -H 'columns: xxx'`
-	hasBitmap := false
-	for _, col := range c.ColumnDefs().GetCols() {
+	streamLoadCols := make([]string, 0, colCount) // construct for streamload header `curl -H 'columns: xxx'`
+	hasStreamLoadColMapping := false
+	for i, col := range c.ColumnDefs().GetCols() {
 		colName := strings.Trim(col.GetColName().GetText(), "`")
 		colType_ := col.GetType_()
 		visitor := gen.NewTypeVisitor(fmt.Sprintf("%s.%s", table, colName), nil)
 		colBaseType := visitor.GetBaseType(colType_)
 
-		if colBaseType == "BITMAP" {
-			hasBitmap = true
-			streamLoadCols = append(streamLoadCols, fmt.Sprintf("raw_%s,`%s`=bitmap_from_array(cast(raw_%s as ARRAY<BIGINT(20)>))", colName, colName, colName))
-		} else {
-			streamLoadCols = append(streamLoadCols, "`"+colName+"`")
-		}
-
 		// get column gen rule
 		visitor.GenRule = newColGenRule(col, colName, colBaseType, colStats, customColumnRule)
 
 		// build column generator
-		tg.colGens = append(tg.colGens, visitor.GetTypeGen(colType_))
+		gen := visitor.GetTypeGen(colType_)
+		tg.colGens = append(tg.colGens, gen)
 		tg.RecordRefTables(*visitor.TableRefs...)
 		tg.Columns = append(tg.Columns, colName)
+
+		// column mapping in streamload header
+		var loadMapping string
+		loadCol := colName
+		if len(streamloadColNames) > 0 {
+			loadCol = streamloadColNames[i]
+		}
+		switch colBaseType {
+		case "BITMAP":
+			hasStreamLoadColMapping = true
+			loadMapping = fmt.Sprintf("raw_%s,`%s`=bitmap_from_array(cast(raw_%s as ARRAY<BIGINT(20)>))", loadCol, loadCol, loadCol)
+		case "HLL":
+			hasStreamLoadColMapping = true
+			loadMapping = fmt.Sprintf("raw_%s,`%s`=hll_empty()", loadCol, loadCol)
+			if from := visitor.GetRule("from"); from != nil {
+				loadMapping = fmt.Sprintf("raw_%s,`%s`=hll_hash(%v)", loadCol, loadCol, from)
+			}
+		default:
+			loadMapping = "`" + loadCol + "`"
+		}
+		streamLoadCols = append(streamLoadCols, loadMapping)
 	}
 
-	if hasBitmap {
-		tg.streamloadColumns = "columns:" + strings.Join(streamLoadCols, ",")
+	if hasStreamLoadColMapping {
+		tg.StreamloadColMapping = "columns:" + strings.Join(streamLoadCols, ",")
 	}
 
 	return tg, nil
@@ -155,14 +170,14 @@ type TableGen struct {
 	Rows       int
 	RefToTable map[string]struct{} // ref generator to other tables
 
-	streamloadColumns string
-	colGens           []gen.Gen
+	StreamloadColMapping string
+	colGens              []gen.Gen
 }
 
 // Gen generates multiple CSV line into writer.
 func (tg *TableGen) GenCSV(w *bufio.Writer, rows int) error {
-	if tg.streamloadColumns != "" {
-		if _, err := w.WriteString(tg.streamloadColumns); err != nil {
+	if tg.StreamloadColMapping != "" {
+		if _, err := w.WriteString(tg.StreamloadColMapping); err != nil {
 			return err
 		}
 		w.WriteByte('\n')

@@ -32,6 +32,7 @@ import (
 
 	"github.com/Thearas/dodo/src"
 	"github.com/Thearas/dodo/src/generator"
+	"github.com/Thearas/dodo/src/parser"
 )
 
 // GendataConfig holds the configuration values
@@ -70,7 +71,7 @@ Example:
 		return initConfig(cmd)
 	},
 	SilenceUsage: true,
-	RunE: func(cmd *cobra.Command, _ []string) error {
+	RunE: func(cmd *cobra.Command, _ []string) (err error) {
 		ctx := cmd.Context()
 
 		if err := completeGendataConfig(); err != nil {
@@ -103,15 +104,26 @@ Example:
 			tables[i] = ddl
 			statss[i] = stats
 		}
+		// anonymize
+		query := GendataConfig.Query
+		rawTables := tables
+		if AnonymizeConfig.Enabled {
+			SetupAnonymizer()
+			tables = lo.Map(tables, func(t string, i int) string { return AnonymizeSQL(GendataConfig.genFromDDLs[i], t) })
+			statss = AnonymizeStats(statss)
+			query = AnonymizeSQL("query", query)
+		}
 		// send to LLM
-		if GendataConfig.GenConf == "" && GendataConfig.LLM != "" {
+		useLLM := GendataConfig.GenConf == "" && GendataConfig.LLM != ""
+		if useLLM {
 			genconfPath := filepath.Join(GlobalConfig.DodoDataDir, "gendata.yaml")
-			logrus.Infof("Generating config '%s' via LLM model: %s\n", genconfPath, GendataConfig.LLM)
+			logrus.Infof("Generating config '%s' via LLM model: %s, with anonymization: %v\n", genconfPath, GendataConfig.LLM, AnonymizeConfig.Enabled)
+
 			genconf, err := src.LLMGendataConfig(
 				ctx,
 				GendataConfig.LLMApiKey, "", GendataConfig.LLM, GendataConfig.Prompt,
-				tables, lo.Map(statss, func(s *src.TableStats, _ int) string { return string(src.MustYamlMarshal(s)) }),
-				[]string{GendataConfig.Query},
+				tables, lo.FilterMap(statss, func(s *src.TableStats, _ int) (string, bool) { return string(src.MustYamlMarshal(s)), s != nil }),
+				[]string{query},
 			)
 			if err != nil {
 				logrus.Errorf("Failed to create gendata config via LLM %s\n", GendataConfig.LLM)
@@ -137,7 +149,16 @@ Example:
 			return err
 		}
 		for i, ddlFile := range GendataConfig.genFromDDLs {
-			tg, err := src.NewTableGen(ddlFile, tables[i], statss[i], GendataConfig.NumRows)
+			// set streamload column mapping to the unanonymized version
+			streamloadCols := []string{}
+			if AnonymizeConfig.Enabled {
+				streamloadCols, err = parser.GetTableCols(ddlFile, rawTables[i])
+				if err != nil {
+					return fmt.Errorf("failed to get columns for table %s: %v", rawTables[i], err)
+				}
+			}
+
+			tg, err := src.NewTableGen(ddlFile, tables[i], statss[i], GendataConfig.NumRows, streamloadCols)
 			if err != nil {
 				return err
 			}
@@ -150,6 +171,10 @@ Example:
 		} else if len(tableGens) == 0 {
 			logrus.Infoln("No table to generate.")
 			return nil
+		}
+		// store anonymize hash dict
+		if AnonymizeConfig.Enabled {
+			src.StoreMiniHashDict(AnonymizeConfig.Method, AnonymizeConfig.HashDictPath)
 		}
 
 		// 3. Generate data according to table ref dependence
@@ -242,7 +267,7 @@ func init() {
 	pFlags.StringVarP(&GendataConfig.LLMApiKey, "llm-api-key", "k", "", "LLM API key")
 	pFlags.StringVarP(&GendataConfig.Query, "query", "q", "", "SQL query file to generate data, only can be used when LLM is on")
 	pFlags.StringVarP(&GendataConfig.Prompt, "prompt", "p", "", "Additional user prompt for LLM")
-
+	addAnonymizeBaseFlags(pFlags, false)
 }
 
 // completeGendataConfig validates and completes the gendata configuration

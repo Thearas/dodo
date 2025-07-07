@@ -72,7 +72,7 @@ dodo gendata -l 'deepseek-coder' -k '<deepseek-api-key>' --ddl table.sql --query
 dodo import --help
 
 # import data for db1, it auto finds generated data under 'output/' dir
-dodo import --dbs db1,db2 --host <host> --port <port> --user root --password '***'
+dodo import --dbs db1,db2 --host <host> --http-port <http-port> --user root --password '***'
 
 # import data for t1 and t2 in db1
 dodo import --dbs db1 --table t1,t2
