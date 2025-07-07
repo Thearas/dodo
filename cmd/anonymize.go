@@ -16,6 +16,7 @@ limitations under the License.
 package cmd
 
 import (
+	"encoding/json"
 	"fmt"
 
 	"github.com/spf13/cobra"
@@ -53,12 +54,7 @@ var anonymizeCmd = &cobra.Command{
 			return err
 		}
 
-		src.SetupAnonymizer(
-			AnonymizeConfig.Method,
-			AnonymizeConfig.HashDictPath,
-			AnonymizeConfig.IdMinLength,
-			AnonymizeConfig.ReserveIds...,
-		)
+		SetupAnonymizer()
 
 		sql := src.AnonymizeSql(AnonymizeConfig.Method, "", input)
 		_, _ = fmt.Println(sql)
@@ -90,4 +86,37 @@ func addAnonymizeBaseFlags(pFlags *pflag.FlagSet, defaultEnabled bool) {
 	pFlags.StringVar(&AnonymizeConfig.Method, "anonymize-method", "minihash", "Anonymize method, hash or minihash")
 	pFlags.IntVar(&AnonymizeConfig.IdMinLength, "anonymize-id-min-length", 3, "Skip anonymization for id which length is less than this value, only for hash method")
 	pFlags.StringVar(&AnonymizeConfig.HashDictPath, "anonymize-minihash-dict", "./dodo_hashdict.yaml", "Hash dict file path for minihash method")
+}
+
+func SetupAnonymizer() {
+	src.SetupAnonymizer(
+		AnonymizeConfig.Method,
+		AnonymizeConfig.HashDictPath,
+		AnonymizeConfig.IdMinLength,
+		AnonymizeConfig.ReserveIds...,
+	)
+}
+
+func AnonymizeStats(s []*src.TableStats) []*src.TableStats {
+	// deepcopy
+	stats := []*src.TableStats{}
+	if err := json.Unmarshal(src.MustJsonMarshal(s), &stats); err != nil {
+		panic("unreachable")
+	}
+
+	for _, t := range stats {
+		if t == nil {
+			continue
+		}
+		t.Name = src.Anonymize(AnonymizeConfig.Method, t.Name)
+		for _, c := range t.Columns {
+			c.Name = src.Anonymize(AnonymizeConfig.Method, c.Name)
+		}
+	}
+
+	return stats
+}
+
+func AnonymizeSQL(identifier, sql string) string {
+	return src.AnonymizeSql(AnonymizeConfig.Method, identifier, sql)
 }

@@ -245,3 +245,15 @@ func (p *Parser) ToSQL() (string, error) {
 
 	return s, nil
 }
+
+func GetTableCols(sqlId, createTableStmt string) ([]string, error) {
+	p := NewParser(sqlId, createTableStmt)
+	c, ok := p.SupportedCreateStatement().(*CreateTableContext)
+	if !ok {
+		logrus.Fatalln("SQL parser error")
+	} else if p.ErrListener.LastErr != nil {
+		return nil, p.ErrListener.LastErr
+	}
+
+	return lo.Map(c.ColumnDefs().GetCols(), func(col IColumnDefContext, _ int) string { return strings.Trim(col.GetColName().GetText(), "`") }), nil
+}

@@ -108,7 +108,7 @@ func LLMGendataConfig(
 		result.WriteString(content)
 	}
 	if err := c.Err(); err != nil {
-		return "", err
+		return "", fmt.Errorf("error from llm: %w", err)
 	}
 
 	return strings.TrimPrefix(result.String(), LLMOutputPrefix), nil

@@ -192,6 +192,7 @@ Default generation rules for various types:
 | JSON/JSONB |  |  | STRUCT<col1:SMALLINT, col2:SMALLINT> |
 | VARIANT |  |  | STRUCT<col1:SMALLINT, col2:SMALLINT> |
 | BITMAP | 5 | element: 0 - MaxInt32 |  |
+| HLL |  | hll_empty() |  |
 | TEXT/STRING/VARCHAR | 1 - 10 |  |  |
 | TINYINT |  | MinInt8 - MaxInt8 |  |
 | SMALLINT |  | MinInt16 - MaxInt16 |  |
@@ -378,6 +379,14 @@ Complex types have special generation rules:
                   length: 2 # Length of each string element in the array
     ```
 
+5. For HLL types, the default value is `hll_empty()`, you can set its value from other column at the same table:
+
+    ```yaml
+    columns:
+      - name: t_hll # The value of t_hll will be `hll_hash(t_str)`
+        from: t_str
+    ```
+
 #### gen
 
 Optional custom generator, supports the following types, MUST be defined under `gen:`:
@@ -501,7 +510,8 @@ You must pass the `--llm` and `--llm-api-key` parameters. The former represents 
 # Generate data from exported t1, t2 tables
 dodo gendata --dbs db1 --tables t1,t2 \
     --llm 'deepseek-chat' --llm-api-key 'sk-xxx' \
-    --query 'select * from t1 join t2 on t1.a = t2.b where t1.c IN ("a", "b", "c") and t2.d = 1'
+    --query 'select * from t1 join t2 on t1.a = t2.b where t1.c IN ("a", "b", "c") and t2.d = 1' \
+    --anonymize # anonymize sql before sending to LLM
 
 # Generate data from any create-table and query
 dodo gendata -C example/usercase/.dodo.yaml --ddl 'example/usercase/ddl/*.sql' --query "$(cat example/usercase/sql/*)"

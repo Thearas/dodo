@@ -309,7 +309,10 @@ func (v *TypeVisitor) GetTypeGen(type_ parser.IDataTypeContext) Gen {
 			g = NewFuncGen(func() any { return gofakeit.IPv4Address() })
 		case "IPV6":
 			g = NewFuncGen(func() any { return gofakeit.IPv6Address() })
-		default: // TODO: HLL, AGG_STATE, QUANTILE_STATE
+		case "HLL":
+			// skip gen HLL
+			g = NewFuncGen(func() any { return "" })
+		default: // TODO: AGG_STATE, QUANTILE_STATE
 			logrus.Fatalf("Unsupported column type '%s' for column '%s'\n", type_.GetText(), v.Colpath)
 		}
 	}

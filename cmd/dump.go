@@ -102,7 +102,7 @@ or environment variables with prefix 'DORIS_', e.g.
 		}
 
 		if AnonymizeConfig.Enabled {
-			src.SetupAnonymizer(AnonymizeConfig.Method, AnonymizeConfig.HashDictPath, AnonymizeConfig.IdMinLength, AnonymizeConfig.ReserveIds...)
+			SetupAnonymizer()
 		}
 
 		// dump schemas
@@ -301,7 +301,7 @@ func outputSchemas(schemas []*src.DBSchema) error {
 
 				filename = fmt.Sprintf("%s.%s.%s.sql", s.DB, s.Name, s.Type.Lower())
 				if AnonymizeConfig.Enabled {
-					s.CreateStmt = src.AnonymizeSql(AnonymizeConfig.Method, filename, s.CreateStmt)
+					s.CreateStmt = AnonymizeSQL(filename, s.CreateStmt)
 				}
 
 				path := filepath.Join(DumpConfig.OutputDDLDir, filename)
@@ -320,12 +320,7 @@ func outputSchemas(schemas []*src.DBSchema) error {
 			}
 			if AnonymizeConfig.Enabled {
 				s.Name = src.Anonymize(AnonymizeConfig.Method, s.Name)
-				for _, s := range s.Stats {
-					s.Name = src.Anonymize(AnonymizeConfig.Method, s.Name)
-					for _, c := range s.Columns {
-						c.Name = src.Anonymize(AnonymizeConfig.Method, c.Name)
-					}
-				}
+				s.Stats = AnonymizeStats(s.Stats)
 			}
 			yml_, err := yaml.Marshal(s)
 			if err != nil {
@@ -501,7 +496,7 @@ func (w *queryWriter) WriteSql(s string) error {
 		b := strings.Builder{}
 		b.Grow(len(s))
 		b.WriteString(leadComment)
-		b.WriteString(src.AnonymizeSql(AnonymizeConfig.Method, w.filename+"#"+strconv.Itoa(w.count), s))
+		b.WriteString(AnonymizeSQL(w.filename+"#"+strconv.Itoa(w.count), s))
 		s = b.String()
 	}
 	if w.w == nil {
