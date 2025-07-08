@@ -100,6 +100,27 @@ tables:
                 enum: [1, 2, 3]
           weights: [0.25, 0.25, 0.25, 0.25]
 
+      # parts generator, part value can be any literal or a generation rule, parts must combine with format
+      - name: date1
+        format: "{{year}}-{{%02d}}-{{%02d}}"
+        gen:
+          parts:
+            - gen: # month
+                type: int
+                min: 1
+                max: 12
+            - gen: # day
+                type: int
+                min: 1
+                max: 20
+      - name: t_null_char # char(10)
+        format: "{{%s}}--{{%02d}}"
+        gen:
+          parts:
+            - "prefix"
+            - gen:
+                enum: [2, 4, 6, 8, 10]
+
       # ref generator
       - name: t_int
         # use values from another previously generated table column. Usually handle JOIN.

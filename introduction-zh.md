@@ -19,6 +19,7 @@
     - [gen](#gen)
       - [inc](#inc)
       - [enum](#enum)
+      - [parts](#parts)
       - [ref](#ref)
       - [type](#type)
       - [golang](#golang)
@@ -291,7 +292,7 @@ columns:
 
 无论什么生成规则，都能有一个 `format`，它会在该列生成数据后跑，通过自定义模板生成字符串，然后输出到 CSV 文件。`format` 中可以使用两种标签（或叫占位符）：
 
-1. 格式化该列的返回值，如 `{{%s}}` 或 `{{%d}}` 等，语法同 Go 的 `fmt.Sprintf()`
+1. 格式化该列的返回值，如 `{{%s}}` 或 `{{%d}}` 等，语法同 Go 的 `fmt.Sprintf()`。一个 `format` 中只允许有一个此类标签（除非使用 [`parts`](#parts)）
 2. 内置标签如 `{{month}}`、`{{year}}` 等，所有内置标签见：[src/generator/README.md](./src/generator/README.md#format-tags)。
 
 例如：
@@ -421,6 +422,7 @@ columns:
     gen:
       enum: [foo, bar, foobar]
       weights: [0.2, 0.6, 0.2]  # 可选，指定各值被选中的概率
+
   - name: t_bigint
     gen:
       # 随机选择一个生成规则来生成值，各有 1/4 的概率被选中
@@ -431,6 +433,36 @@ columns:
         - gen:
             enum: [1, 2, 3]
       weights: [0.25, 0.25, 0.25, 0.25]
+```
+
+#### parts
+
+必须与 [`format`](#format) 一起使用。灵活组合多个值来生成最终结果。
+
+`parts` 一次会生成多个值，按顺序填充到 [`format`](#format) 的 `{{%xxx}}` 中，各部分的值可以是字面量或生成规则：
+
+```yaml
+columns:
+  - name: date1
+    format: "{{year}}-{{%02d}}-{{%02d}}"
+    gen:
+      parts:
+        - gen: # month
+            type: int
+            min: 1
+            max: 12
+        - gen: # day
+            type: int
+            min: 1
+            max: 20
+
+  - name: t_null_char # char(10)
+    format: "{{%s}}--{{%02d}}" # parts must be used with format
+    gen:
+      parts:
+        - "prefix"
+        - gen:
+            enum: [2, 4, 6, 8, 10]
 ```
 
 ##### ref
@@ -511,7 +543,8 @@ dodo gendata --dbs db1 --tables t1,t2 \
     --anonymize # 将 SQL 脱敏后再发给 LLM 
 
 # 从任意 create-table 和 query 生成数据
-dodo gendata -C example/usercase/.dodo.yaml --ddl 'example/usercase/ddl/*.sql' --query "$(cat example/usercase/sql/*)"
+cd example/usercase
+dodo gendata -C example.dodo.yaml --ddl 'ddl/*.sql' --query "$(cat sql/*)"
 
 # 使用 `--prompt` 附加提示
 dodo gendata ... --prompt '每张表生成 1000 行数据'

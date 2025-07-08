@@ -22,8 +22,9 @@ var CustomGenConstructors map[string]CustomGenConstructor
 
 func init() {
 	CustomGenConstructors = map[string]CustomGenConstructor{
-		"inc":    NewIncGenerator,
-		"enum":   NewEnumGenerator,
+		"inc":  NewIncGenerator,
+		"enum": NewEnumGenerator, "enums": NewEnumGenerator,
+		"parts":  NewPartsGenerator,
 		"ref":    NewRefGenerator,
 		"type":   NewTypeGenerator,
 		"golang": NewGolangGenerator,
@@ -61,20 +62,72 @@ func NewTypeVisitor(colpath string, genRule GenRule) *TypeVisitor {
 		TableRefs: &[]string{},
 	}
 }
-func (v *TypeVisitor) GetTypeGen(type_ parser.IDataTypeContext) Gen {
-	baseType := v.GetBaseType(type_)
 
-	// Merge global (aka. default) generation rules.
-	v.MergeDefaultRule(baseType)
+func (v *TypeVisitor) GetGen(type_ parser.IDataTypeContext) Gen {
+	baseType := v.GetBaseType(type_)
+	v.MergeDefaultRule(baseType) // Merge global (aka. default) generation rules.
 	if logrus.GetLevel() > logrus.DebugLevel {
 		logrus.Tracef("gen rule of '%s': %s\n", v.Colpath, string(MustJSONMarshal(v.GenRule)))
 	}
 
 	var (
-		nullFrequency = v.GetNullFrequency()
-		g             Gen
+		g   Gen
+		err error
 	)
 
+	// 1. custom generator
+	if customGenRule, ok := v.GetRule("gen").(GenRule); ok {
+		var g_ Gen
+		for name, customGenerator := range CustomGenConstructors {
+			if _, ok := customGenRule[name]; !ok {
+				continue
+			}
+
+			g_, err = customGenerator(v, type_, customGenRule)
+			if err != nil {
+				logrus.Fatalf("Invalid custom generator '%s' for column '%s', err: %v\n", name, v.Colpath, err)
+			}
+			break
+
+		}
+		g = g_
+		if g == nil {
+			logrus.Fatalf("Custom generator not found for column '%s', expect one of %v\n",
+				v.Colpath,
+				lo.MapToSlice(CustomGenConstructors, func(name string, _ CustomGenConstructor) string { return name }),
+			)
+		}
+	} else {
+		// 2. type generator
+		g = v.getTypeGen(baseType, type_)
+	}
+
+	// format generator
+	if format, ok := v.GetRule("format").(string); ok && format != "" {
+		g, err = NewFormatGenerator(format, g)
+		if err != nil {
+			logrus.Fatalf("The format rule '%s' of column '%s' compile failed, err: %v\n", format, v.Colpath, err)
+		}
+	} else if _, ok := g.(*PartsGen); ok {
+		logrus.Fatalf("Parts generator cannot be used without format rule, please add 'format' rule for column '%s'\n", v.Colpath)
+	}
+
+	// null generator
+	nullFrequency := v.GetNullFrequency()
+	if nullFrequency > 0 && nullFrequency <= 1 && baseType != "BITMAP" {
+		return NewFuncGen(func() any {
+			if rand.Float32() < nullFrequency {
+				return nil
+			}
+			return g.Gen()
+		})
+	}
+
+	return g
+}
+
+func (v *TypeVisitor) getTypeGen(baseType string, type_ parser.IDataTypeContext) Gen {
+	var g Gen
 	switch ty := type_.(type) {
 	case *parser.ComplexDataTypeContext:
 		switch baseType {
@@ -164,7 +217,7 @@ func (v *TypeVisitor) GetTypeGen(type_ parser.IDataTypeContext) Gen {
 				logrus.Fatalf("Invalid JSON structure '%s' for column '%s': %v\n", structure, v.Colpath, err)
 			}
 			visitor := NewTypeVisitor(v.Colpath, genRule)
-			g = visitor.GetTypeGen(dataType)
+			g = visitor.GetGen(dataType)
 		case "BOOL", "BOOLEAN":
 			enum := []int{0, 1}
 			g = NewFuncGen(func() any { return gofakeit.RandomInt(enum) }) // BOOLEAN is typically 0 or 1
@@ -316,48 +369,6 @@ func (v *TypeVisitor) GetTypeGen(type_ parser.IDataTypeContext) Gen {
 			logrus.Fatalf("Unsupported column type '%s' for column '%s'\n", type_.GetText(), v.Colpath)
 		}
 	}
-
-	// custom generator
-	var err error
-	if customGenRule, ok := v.GetRule("gen").(GenRule); ok {
-		var g_ Gen
-		for name, customGenerator := range CustomGenConstructors {
-			if _, ok := customGenRule[name]; !ok {
-				continue
-			}
-
-			g_, err = customGenerator(v, type_, customGenRule)
-			if err != nil {
-				logrus.Fatalf("Invalid custom generator '%s' for column '%s', err: %v\n", name, v.Colpath, err)
-			}
-			break
-
-		}
-		g = g_
-		if g == nil {
-			logrus.Fatalf("Custom generator not found for column '%s', expect one of %v\n",
-				v.Colpath,
-				lo.MapToSlice(CustomGenConstructors, func(name string, _ CustomGenConstructor) string { return name }),
-			)
-		}
-	}
-	// format generator
-	if format, ok := v.GetRule("format").(string); ok && format != "" {
-		g, err = NewFormatGenerator(format, g)
-		if err != nil {
-			logrus.Fatalf("The format rule '%s' of column '%s' compile failed, err: %v\n", format, v.Colpath, err)
-		}
-	}
-	// null generator
-	if nullFrequency > 0 && nullFrequency <= 1 && baseType != "BITMAP" {
-		return NewFuncGen(func() any {
-			if rand.Float32() < nullFrequency {
-				return nil
-			}
-			return g.Gen()
-		})
-	}
-
 	return g
 }
 
@@ -456,7 +467,7 @@ func (v *TypeVisitor) GetChildGen(name string, childType parser.IDataTypeContext
 	// child visitor uses the same table ref records as root visitor's
 	visitor.TableRefs = v.TableRefs
 
-	return visitor.GetTypeGen(childType)
+	return visitor.GetGen(childType)
 }
 
 func (v *TypeVisitor) GetNullFrequency() float32 {

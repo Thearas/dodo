@@ -22,13 +22,12 @@ func (g *TypeGen) Gen() any {
 
 func NewTypeGenerator(v *TypeVisitor, _ parser.IDataTypeContext, r GenRule) (Gen, error) {
 	p := parser.NewParser(v.Colpath, cast.ToString(r["type"]))
-	dataType := p.DataType()
 	if p.ErrListener.LastErr != nil {
 		return nil, fmt.Errorf("parse type generator failed for column '%s', err: %v", v.Colpath, p.ErrListener.LastErr)
 	}
 
 	return &TypeGen{
 		GenRule: r,
-		gen:     v.GetChildGen(v.Colpath, dataType, r),
+		gen:     v.GetChildGen(v.Colpath, p.DataType(), r),
 	}, nil
 }

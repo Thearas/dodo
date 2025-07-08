@@ -180,7 +180,7 @@ columns:
 
 No matter what generation rule, there always can have a `format`, which will run after the column data generation, generate a string basing on the template, and then output it to CSV file. There're two types of tags (aka. placeholders) can be used in `format`:
 
-1. Format the return value of the column, such as `{{%s}}` or `{{%d}}`, etc., with the same syntax as Go's `fmt.Sprintf()`
+1. Format the return value of the column, such as `{{%s}}` or `{{%d}}`, etc., with the same syntax as Go's `fmt.Sprintf()`. There can only be one such label in a `format` (except using [`parts`](#parts)).
 2. Built-in tags such as `{{month}}`, `{{year}}`, etc, all built-in tags can be found in: [src/generator/README.md](./src/generator/README.md#format-tags).
 
 For example:
@@ -310,6 +310,7 @@ columns:
     gen:
       enum: [foo, bar, foobar]
       weights: [0.2, 0.6, 0.2]  # Optional, specifies the probability of each value being selected
+
   - name: t_bigint
     gen:
       # randomly choose one generation rule to generate value, each has 25% probability
@@ -320,6 +321,36 @@ columns:
         - gen:
             enum: [1, 2, 3]
       weights: [0.25, 0.25, 0.25, 0.25]
+```
+
+#### parts
+
+Must be used together with [`format`](#format). Flexibly combine multiple values ​​to produce the final result.
+
+`parts` generates multiple values ​​at a time and fills them into `{{%xxx}}` of [`format`](#format) in order. The value of each part can be a literal or a generation rule:
+
+```yaml
+columns:
+  - name: date1
+    format: "{{year}}-{{%02d}}-{{%02d}}"
+    gen:
+      parts:
+        - gen: # month
+            type: int
+            min: 1
+            max: 12
+        - gen: # day
+            type: int
+            min: 1
+            max: 20
+
+  - name: t_null_char # char(10)
+    format: "{{%s}}--{{%02d}}" # parts must be used with format
+    gen:
+      parts:
+        - "prefix"
+        - gen:
+            enum: [2, 4, 6, 8, 10]
 ```
 
 ##### ref
@@ -1022,6 +1053,27 @@ tables:
             - gen:
                 enum: [1, 2, 3]
           weights: [0.25, 0.25, 0.25, 0.25]
+
+      # parts generator, part value can be any literal or a generation rule, parts must combine with format
+      - name: date1
+        format: "{{year}}-{{%02d}}-{{%02d}}"
+        gen:
+          parts:
+            - gen: # month
+                type: int
+                min: 1
+                max: 12
+            - gen: # day
+                type: int
+                min: 1
+                max: 20
+      - name: t_null_char # char(10)
+        format: "{{%s}}--{{%02d}}"
+        gen:
+          parts:
+            - "prefix"
+            - gen:
+                enum: [2, 4, 6, 8, 10]
 
       # ref generator
       - name: t_int

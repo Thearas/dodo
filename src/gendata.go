@@ -78,7 +78,7 @@ func NewTableGen(ddlfile, createTableStmt string, stats *TableStats, rows int, s
 		visitor.GenRule = newColGenRule(col, colName, colBaseType, colStats, customColumnRule)
 
 		// build column generator
-		gen := visitor.GetTypeGen(colType_)
+		gen := visitor.GetGen(colType_)
 		tg.colGens = append(tg.colGens, gen)
 		tg.RecordRefTables(*visitor.TableRefs...)
 		tg.Columns = append(tg.Columns, colName)
