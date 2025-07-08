@@ -1,0 +1,9 @@
+# Change to your own Doris IP
+host: 127.0.0.1
+port: 9030
+http-port: 8030
+user: root
+dbs: [example]
+
+llm: deepseek-chat    # or o3-mini, etc.
+llm-api-key: sk-xxxx  # Your LLM API key

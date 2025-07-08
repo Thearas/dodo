@@ -5,6 +5,7 @@ import (
 	"io"
 	"strings"
 
+	"github.com/goccy/go-json"
 	"github.com/sirupsen/logrus"
 	"github.com/valyala/fasttemplate"
 )
@@ -19,19 +20,38 @@ type FormatGen struct {
 }
 
 func (g *FormatGen) Gen() any {
-	var result any
+	var (
+		result      any
+		resultSlice []any
+	)
 	if g.inner != nil {
 		result = g.inner.Gen()
 	}
 	if result == nil {
 		return nil
 	}
+	if j, ok := result.(json.RawMessage); ok {
+		result = string(j)
+	} else if s, ok := result.([]any); ok {
+		resultSlice = s
+	}
 
+	var valueIdx int
 	formatted, err := g.template.ExecuteFuncStringWithErr(func(w io.Writer, tag string) (int, error) {
+		// 1. inject underlying generator result
 		if strings.HasPrefix(tag, "%") {
-			// inject result
-			return w.Write(fmt.Appendf(nil, tag, result))
+			res := result
+			if resultSlice != nil {
+				if valueIdx >= len(resultSlice) {
+					panic(fmt.Errorf("format parts out of range: %d, format: %s", valueIdx, g.Format))
+				}
+				res = resultSlice[valueIdx]
+				valueIdx++
+			}
+			return w.Write(fmt.Appendf(nil, tag, res))
 		}
+
+		// 2. inject built-in format tag
 		tagF, ok := FormatTags[tag]
 		if !ok {
 			return 0, fmt.Errorf("unknown format tag '%s'", tag)

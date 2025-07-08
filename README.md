@@ -110,7 +110,7 @@ dodo diff replay1/ replay2/
 
 Generate CSV data from create-table SQLs. All databases with similar syntax as Doris are supported, like MySQL, Hive, etc.
 
-Here is an example. See [Custom Generation Rules](./introduction.md#custom-generation-rules) and **[AI Generation](./introduction.md#ai-generation)** for more:
+Here is an example. See [Custom Generation Rules](./introduction.md#custom-generation-rules) and **[AI Generation](./introduction.md#ai-generationvia-openaideepseek)** for more:
 
 ```sh
 echo 'create table t1 (
