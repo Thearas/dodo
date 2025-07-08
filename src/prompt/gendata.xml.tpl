@@ -12,7 +12,7 @@ So your task is generating YAML configurations for the data generation tool dodo
 </requirements>
 
 <usage>
-Learn the usage below (document and examples) of tool `dodo`. Especially, the `gendata` command and its `--genconf` config:
+Learn the usage of `gendata` command below (document and examples) of tool `dodo`:
 
 1. The guide of YAML configurations for the data generation is in XML tag `document`
 2. The two examples are in XML tag `examples`

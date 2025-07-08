@@ -206,6 +206,8 @@ Default generation rules for various types:
 | DATE |  | 10 years ago - now |  |
 | DATETIME |  | 10 years ago - now |  |
 
+- The `string` type letter is randomly generated, and the charset is alphanumeric (a-z, A-Z, 0-9)
+
 ### Custom Generation Rules
 
 When generating data, specify the configuration file using `--genconf gendata.yaml`. For a complete example, see [example/gendata.yaml](./example/gendata.yaml).
@@ -280,7 +282,7 @@ columns:
 
 #### length
 
-Specifies the length range for bitmap, string, array or map types. For example:
+Specifies the length range for bitmap, string, array or map types. For example, randomly generates a `string` in 1 - 5 length:
 
 ```yaml
 columns:
@@ -438,7 +440,7 @@ columns:
       weights: [0.25, 0.25, 0.25, 0.25]
 ```
 
-#### parts
+##### parts
 
 Must be used together with [`format`](#format). Flexibly combine multiple values ​​to produce the final result.
 
@@ -470,7 +472,8 @@ columns:
 
 ##### ref
 
-Reference generator, randomly uses values from other `table.column`. Typically used for relational columns, like `t1 JOIN t2 ON t1.c1 = t2.c1` or `WHERE t1.c1 = t2.c1`:
+Reference generator, randomly uses values from other `table.column`, can be used in nested generators (like `enum`, `parts`, `fields`).
+Typically used for relational columns, like `t1 JOIN t2 ON t1.c1 = t2.c1` or `WHERE t1.c1 = t2.c1`:
 
 ```yaml
 columns:
@@ -478,7 +481,16 @@ columns:
     # format: "1{{%6d}}"
     gen:
       ref: employees.department_id
-      limit: 1000  # Randomly select 1000 values (default 1000)
+      limit: 100  # Randomly select 100 values (default 1000)
+
+  - name: t_struct # struct<dp_id:int, name:text>
+    fields:
+      - name: dp_id
+        gen:
+          ref: employees.department_id
+      - name: name
+        gen:
+          ref: employees.name
 ```
 
 > [!IMPORTANT]

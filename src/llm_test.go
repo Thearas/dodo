@@ -5,6 +5,7 @@ import (
 	"os"
 	"testing"
 
+	"github.com/samber/lo"
 	"github.com/stretchr/testify/assert"
 	"gopkg.in/yaml.v3"
 )
@@ -192,7 +193,7 @@ order by 1,2;
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got, err := LLMGendataConfig(tt.args.ctx, tt.args.apiKey, tt.args.baseURL, "", "", tt.args.tables, tt.args.columnStats, tt.args.sqls)
+			got, err := LLMGendataConfig(tt.args.ctx, tt.args.apiKey, tt.args.baseURL, "deepseek-chat", "", tt.args.tables, tt.args.columnStats, tt.args.sqls)
 			if (err != nil) != tt.wantErr {
 				t.Errorf("LLMGendataConfig() error = %v, wantErr %v", err, tt.wantErr)
 				return
@@ -202,6 +203,10 @@ order by 1,2;
 			assert.NoError(t, yaml.Unmarshal([]byte(got), &gotData))
 			assert.NotNil(t, gotData["tables"])
 			assert.IsType(t, []any{}, gotData["tables"])
+			assert.True(t, lo.ContainsBy(gotData["tables"].([]any), func(item any) bool {
+				table := item.(map[string]any)
+				return table["name"] == "c"
+			}))
 		})
 	}
 }

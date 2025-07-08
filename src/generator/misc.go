@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"math/rand/v2"
 	"time"
+	"unsafe"
 
 	"github.com/brianvoe/gofakeit/v7"
 	"github.com/goccy/go-json"
@@ -109,13 +110,29 @@ func MustYAMLUmarshal(s string) map[string]any {
 	return result
 }
 
+// https://stackoverflow.com/a/31832326/7929631
 func RandomStr(lenMin, lenMax int) string {
-	const allowed = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
+	const letterBytes = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
+	const (
+		letterIdxBits = 6                    // 6 bits to represent a letter index
+		letterIdxMask = 1<<letterIdxBits - 1 // All 1-bits, as many as letterIdxBits
+		letterIdxMax  = 63 / letterIdxBits   // # of letter indices fitting in 63 bits
+	)
 
-	length := gofakeit.IntRange(lenMin, lenMax)
-	b := make([]byte, length)
-	for i := range length {
-		b[i] = allowed[rand.IntN(len(allowed))]
+	n := gofakeit.IntRange(lenMin, lenMax)
+	b := make([]byte, n)
+	// A rand.Int64() generates 63 random bits, enough for letterIdxMax characters!
+	for i, cache, remain := n-1, rand.Int64(), letterIdxMax; i >= 0; {
+		if remain == 0 {
+			cache, remain = rand.Int64(), letterIdxMax
+		}
+		if idx := int(cache & letterIdxMask); idx < len(letterBytes) {
+			b[i] = letterBytes[idx]
+			i--
+		}
+		cache >>= letterIdxBits
+		remain--
 	}
-	return string(b)
+
+	return *(*string)(unsafe.Pointer(&b))
 }

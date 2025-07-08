@@ -203,6 +203,8 @@ dodo import --tables db1.table1 --data 'my_table/*.csv'
 | DATE |  | 10 years ago - now |  |
 | DATETIME |  | 10 years ago - now |  |
 
+- 字符串类型是随机生成的，字符集是大小写字母 + 数字 (a-z, A-Z, 0-9)
+
 ### 自定义生成规则
 
 生成数据时用 `--genconf gendata.yaml` 指定，完整示例见 [example/gendata.yaml](./example/gendata.yaml)。
@@ -435,7 +437,7 @@ columns:
       weights: [0.25, 0.25, 0.25, 0.25]
 ```
 
-#### parts
+##### parts
 
 必须与 [`format`](#format) 一起使用。灵活组合多个值来生成最终结果。
 
@@ -467,7 +469,8 @@ columns:
 
 ##### ref
 
-引用生成器，随机使用其他表的列的值，一般在用于关系列之间，比如 `t1 JOIN t2 ON t1.c1 = t2.c1` 或 `WHERE t1.c1 = t2.c1`：
+引用生成器，随机使用其他表的列的值，可以在嵌套生成器（如 `enum`、`parts`、`fields`）中使用。
+一般在用于关系列之间，比如 `t1 JOIN t2 ON t1.c1 = t2.c1` 或 `WHERE t1.c1 = t2.c1`：
 
 ```yaml
 columns:
@@ -475,7 +478,16 @@ columns:
     # format: "1{{%6d}}"
     gen:
       ref: employees.department_id
-      limit: 1000  # 随机选择 1000 个值（默认 1000）
+      limit: 100  # 随机选择 100 个值（默认 1000）
+
+  - name: t_struct # struct<dp_id:int, name:text>
+    fields:
+      - name: dp_id
+        gen:
+          ref: employees.department_id
+      - name: name
+        gen:
+          ref: employees.name
 ```
 
 > [!IMPORTANT]
