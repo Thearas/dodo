@@ -325,11 +325,11 @@ columns:
       weights: [0.25, 0.25, 0.25, 0.25]
 ```
 
-#### parts
+##### parts
 
-Must be used together with [`format`](#format). Flexibly combine multiple values ​​to produce the final result.
+Must be used together with [`format`](#format). Flexibly combine multiple values to produce the final result.
 
-`parts` generates multiple values ​​at a time and fills them into `{{%xxx}}` of [`format`](#format) in order. The value of each part can be a literal or a generation rule:
+`parts` generates multiple values at a time and fills them into `{{%xxx}}` of [`format`](#format) in order. The value of each part can be a literal or a generation rule:
 
 ```yaml
 columns:

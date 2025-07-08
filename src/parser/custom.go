@@ -140,7 +140,11 @@ func (l *listener) ExitFunctionNameIdentifier(ctx *FunctionNameIdentifierContext
 
 	id, ok := ctx.GetChild(0).GetChild(0).GetChild(0).(*antlr.TerminalNodeImpl)
 	if !ok {
-		return
+		// maybe a non-reserved id, need one more GetChild(0)
+		id, ok = ctx.GetChild(0).GetChild(0).GetChild(0).GetChild(0).(*antlr.TerminalNodeImpl)
+		if !ok {
+			panic("unreachable: can not find function name")
+		}
 	}
 	l.recoverSymbolText(id)
 }

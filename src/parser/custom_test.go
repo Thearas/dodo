@@ -18,7 +18,8 @@ DISTRIBUTED BY HASH(dt_month) BUCKETS 10
 PROPERTIES (
 "replication_allocation" = "tag.location.default:1",
 'bloom_filter_columns' = "dt_month, company_code"
-);`
+);
+select count(dt_month), data from t1`
 
 	p := NewParser("1", sql, NewListener(false, func(_ string) string { return "foo" }))
 	s, err := p.ToSQL()
@@ -33,7 +34,8 @@ DISTRIBUTED BY HASH(foo) BUCKETS 10
 PROPERTIES (
 "replication_allocation" = "tag.location.default:1",
 'bloom_filter_columns' = "foo,foo"
-);`, s)
+);
+select count(foo), foo from foo`, s)
 }
 
 func TestParser(t *testing.T) {
