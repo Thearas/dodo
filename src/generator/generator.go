@@ -8,7 +8,6 @@ import (
 	"strings"
 	"time"
 
-	"dario.cat/mergo"
 	"github.com/brianvoe/gofakeit/v7"
 	"github.com/goccy/go-json"
 	"github.com/samber/lo"
@@ -385,12 +384,12 @@ func (v *TypeVisitor) GetBaseType(type_ parser.IDataTypeContext) (t string) {
 }
 
 func (v *TypeVisitor) MergeDefaultRule(baseType string) *TypeVisitor {
-	defaultGenRule, ok := DefaultTypeGenRules[baseType]
+	defaultGenRule, ok := DefaultTypeGenRules[baseType].(GenRule)
 	if !ok {
 		if ty_, ok := TypeAlias[baseType]; ok {
 			baseType = ty_ //nolint:revive
 		}
-		defaultGenRule, ok = DefaultTypeGenRules[baseType]
+		defaultGenRule, ok = DefaultTypeGenRules[baseType].(GenRule)
 		if !ok {
 			return v
 		}
@@ -399,9 +398,7 @@ func (v *TypeVisitor) MergeDefaultRule(baseType string) *TypeVisitor {
 		return v
 	}
 
-	if err := mergo.Merge(&v.GenRule, defaultGenRule); err != nil {
-		logrus.Fatalf("Unable to merge default gen rule for type '%s' in column '%s', err: %v\n", baseType, v.Colpath, err)
-	}
+	MergeGenRules(v.GenRule, defaultGenRule, false)
 
 	return v
 }

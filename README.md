@@ -64,8 +64,7 @@ dodo gendata --dbs db1,db2 --host <host> --port <port> --user root --password '*
 dodo gendata --dbs db1 --genconf example/gendata.yaml
 
 # gen data with AI (Deepseek LLM)
-dodo gendata -l 'deepseek-coder' -k '<deepseek-api-key>' --ddl table.sql --query 'select xxx'
-
+dodo gendata -l 'deepseek-chat' -k '<deepseek-api-key>' --ddl table.sql --query 'select xxx'
 
 
 # Import data (Require curl command)

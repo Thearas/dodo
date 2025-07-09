@@ -3,7 +3,6 @@ module github.com/Thearas/dodo
 go 1.24.4
 
 require (
-	dario.cat/mergo v1.0.2
 	github.com/antlr4-go/antlr/v4 v4.13.1
 	github.com/bramvdbogaerde/go-scp v1.5.0
 	github.com/brianvoe/gofakeit/v7 v7.2.1

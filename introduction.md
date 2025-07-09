@@ -297,7 +297,7 @@ columns:
 
 No matter what generation rule, there always can have a `format`, which will run after the column data generation, generate a string basing on the template, and then output it to CSV file. There're two types of tags (aka. placeholders) can be used in `format`:
 
-1. Format the return value of the column, such as `{{%s}}` or `{{%d}}`, etc., with the same syntax as Go's `fmt.Sprintf()`. There can only be one such label in a `format` (except using [`parts`](#parts)).
+1. Format the return value of the column, such as `{{%s}}` or `{{%d}}`, etc., with the same syntax as Go's `fmt.Sprintf()`. There can only have one such label in a `format` (except using [`parts`](#parts)).
 2. Built-in tags such as `{{month}}`, `{{year}}`, etc, all built-in tags can be found in: [src/generator/README.md](./src/generator/README.md#format-tags).
 
 For example:
@@ -428,7 +428,7 @@ columns:
       enum: [foo, bar, foobar]
       weights: [0.2, 0.6, 0.2]  # Optional, specifies the probability of each value being selected
 
-  - name: t_bigint
+  - name: t_str
     gen:
       # randomly choose one generation rule to generate value, each has 25% probability
       enum:
@@ -437,7 +437,6 @@ columns:
         - format: "my name is {{username}}"
         - gen:
             enum: [1, 2, 3]
-      weights: [0.25, 0.25, 0.25, 0.25]
 ```
 
 ##### parts
@@ -448,7 +447,7 @@ Must be used together with [`format`](#format). Flexibly combine multiple values
 
 ```yaml
 columns:
-  - name: date1
+  - name: date1 # date
     format: "{{year}}-{{%02d}}-{{%02d}}"
     gen:
       parts:
@@ -472,7 +471,7 @@ columns:
 
 ##### ref
 
-Reference generator, randomly uses values from other `table.column`, can be used in nested generators (like `enum`, `parts`, `fields`).
+Reference generator, randomly uses values from other `table.column`.
 Typically used for relational columns, like `t1 JOIN t2 ON t1.c1 = t2.c1` or `WHERE t1.c1 = t2.c1`:
 
 ```yaml

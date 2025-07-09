@@ -7,7 +7,6 @@ import (
 	"strings"
 	"time"
 
-	"dario.cat/mergo"
 	"github.com/samber/lo"
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/cast"
@@ -34,7 +33,7 @@ var (
 		"TIMESTAMP":  "DATETIME",
 	}
 
-	DefaultTypeGenRules = map[string]GenRule{
+	DefaultTypeGenRules = lo.MapValues(map[string]GenRule{
 		"ARRAY": {
 			"length": GenRule{
 				"min": 1,
@@ -119,7 +118,7 @@ var (
 			"min": time.Now().AddDate(-10, 0, 0),
 			"max": time.Now(),
 		},
-	}
+	}, func(v GenRule, _ string) any { return v })
 )
 
 func SetupGenRules(configFile string) error {
@@ -135,7 +134,7 @@ func SetupGenRules(configFile string) error {
 	if g, ok := GlobalGenRule["type"]; !ok || g == nil {
 		GlobalGenRule["type"] = GenRule{}
 	}
-	GlobalGenRule["type"] = lo.MapEntries(GlobalGenRule["type"].(GenRule), func(ty string, g any) (string, GenRule) {
+	typeGenRules := lo.MapEntries(GlobalGenRule["type"].(GenRule), func(ty string, g any) (string, any) {
 		if g == nil {
 			g = GenRule{}
 		}
@@ -145,12 +144,14 @@ func SetupGenRules(configFile string) error {
 		}
 		return strings.ToUpper(ty), genRule
 	})
-	if err := mergo.Merge(&DefaultTypeGenRules, GlobalGenRule["type"], mergo.WithOverride); err != nil {
-		logrus.Fatalln("Merge global and default gen rules failed, err:", err)
-	}
+	MergeGenRules(DefaultTypeGenRules, typeGenRules, true)
 
 	// copy null_frequency to every types' gen rule
-	for _, genRule := range DefaultTypeGenRules {
+	for _, r := range DefaultTypeGenRules {
+		genRule, ok := r.(GenRule)
+		if !ok {
+			panic("Default type gen rule should be a map")
+		}
 		if r, ok := genRule["null_frequency"]; !ok || r == nil {
 			genRule["null_frequency"] = GlobalGenRule["null_frequency"]
 		}

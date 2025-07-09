@@ -93,12 +93,11 @@ tables:
         gen:
           # randomly choose one generation rule to generate value, each has 25% probability
           enum:
-            - length: 5
-            - length: {min: 5, max: 10}
-            - format: "my name is {{username}}"
+            - {min: 0, max: 5}
+            - {min: 5, max: 10}
+            - format: "{{month}}"
             - gen:
                 enum: [1, 2, 3]
-          weights: [0.25, 0.25, 0.25, 0.25]
 
       # parts generator, part value can be any literal or a generation rule, parts must combine with format
       - name: date1

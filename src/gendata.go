@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"strings"
 
-	"dario.cat/mergo"
 	"github.com/goccy/go-json"
 	"github.com/samber/lo"
 	"github.com/sirupsen/logrus"
@@ -151,9 +150,7 @@ func newColGenRule(col parser.IColumnDefContext, colName, colType string, colSta
 	if !ok || len(customRule) == 0 {
 		return genRule
 	}
-	if err := mergo.Merge(&genRule, customRule, mergo.WithOverride); err != nil {
-		logrus.Fatalln(err)
-	}
+	gen.MergeGenRules(genRule, customRule, true)
 
 	notnull := col.NOT() != nil && col.GetNullable() != nil
 	if notnull {

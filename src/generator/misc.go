@@ -13,6 +13,30 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
+//nolint:revive
+func MergeGenRules(dst, src GenRule, overwrite bool) {
+	for k, v := range src {
+		if overwrite {
+			dst[k] = CloneGenRules(v)
+		} else if _, ok := dst[k]; !ok {
+			dst[k] = CloneGenRules(v)
+		}
+	}
+}
+
+func CloneGenRules(src any) any {
+	r, ok := src.(GenRule)
+	if !ok {
+		return src
+	}
+
+	dst := make(GenRule, len(r))
+	for k, v := range r {
+		dst[k] = CloneGenRules(v)
+	}
+	return dst
+}
+
 func CastMinMax[R int8 | int16 | int | int32 | int64 | float32 | float64 | time.Time](min_, max_ any, baseType, colpath string, errmsg ...string) (R, R) {
 	minVal, maxVal, err := Cast2[R](min_, max_)
 	if err != nil {

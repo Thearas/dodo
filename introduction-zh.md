@@ -425,7 +425,7 @@ columns:
       enum: [foo, bar, foobar]
       weights: [0.2, 0.6, 0.2]  # 可选，指定各值被选中的概率
 
-  - name: t_bigint
+  - name: t_str
     gen:
       # 随机选择一个生成规则来生成值，各有 1/4 的概率被选中
       enum:
@@ -434,7 +434,6 @@ columns:
         - format: "my name is {{username}}"
         - gen:
             enum: [1, 2, 3]
-      weights: [0.25, 0.25, 0.25, 0.25]
 ```
 
 ##### parts
@@ -445,7 +444,7 @@ columns:
 
 ```yaml
 columns:
-  - name: date1
+  - name: date1 # date
     format: "{{year}}-{{%02d}}-{{%02d}}"
     gen:
       parts:
@@ -469,7 +468,7 @@ columns:
 
 ##### ref
 
-引用生成器，随机使用其他表的列的值，可以在嵌套生成器（如 `enum`、`parts`、`fields`）中使用。
+引用生成器，随机使用其他表的列的值。
 一般在用于关系列之间，比如 `t1 JOIN t2 ON t1.c1 = t2.c1` 或 `WHERE t1.c1 = t2.c1`：
 
 ```yaml
