@@ -1,15 +1,17 @@
+# dodo --config example.dodo.yaml
+
 # doris frontend
 host: 127.0.0.1
 port: 9030
 user: root
 password: '******'
 
-# the databases and tables to dump (optional)
+# the databases and tables to work with (optional)
 dbs: [example]
 # tables:
 #   - table1
 #   - example.table2
 
-# if you want to download the audit log from a remote server (optional)
+# if you want to download the audit log from remote FE (optional)
 # ssh-password: '******'
 # ssh-private-key: '/path/to/private_key'

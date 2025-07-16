@@ -14,8 +14,9 @@ import (
 )
 
 const (
-	ColumnSeparator    = '☆' // make me happy
-	DefaultGenRowCount = 1000
+	ColumnSeparator            = '☆' // make me happy
+	DefaultGenRowCount         = 1000
+	GenDataFileFirstLinePrefix = "columns:" // optional first line prefix if stream load needs 'columns: xxx' header
 )
 
 type GenRule = gen.GenRule
@@ -105,7 +106,7 @@ func NewTableGen(ddlfile, createTableStmt string, stats *TableStats, rows int, s
 	}
 
 	if hasStreamLoadColMapping {
-		tg.StreamloadColMapping = "columns:" + strings.Join(streamLoadCols, ",")
+		tg.StreamloadColMapping = GenDataFileFirstLinePrefix + strings.Join(streamLoadCols, ",")
 	}
 
 	return tg, nil

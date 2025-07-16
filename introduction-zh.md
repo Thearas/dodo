@@ -15,7 +15,6 @@
     - [precision/scale](#precisionscale)
     - [length](#length)
     - [format](#format)
-    - [Complex Types (map/array/struct/json/variant)](#complex-types-maparraystructjsonvariant)
     - [gen](#gen)
       - [inc](#inc)
       - [enum](#enum)
@@ -23,6 +22,7 @@
       - [ref](#ref)
       - [type](#type)
       - [golang](#golang)
+    - [复杂类型](#复杂类型-maparraystructjsonvariant)
   - [AI 生成数据](#ai-生成数据使用-openaideepseek)
 - [回放](#回放)
   - [回放速度和并发](#回放速度和并发)
@@ -310,83 +310,6 @@ columns:
 
 注意：如果生成器返回 NULL，format 也会返回 NULL。
 
-#### Complex types map/array/struct/json/variant
-
-复合类型有特殊的生成规则：
-
-1. MAP 类型，可分别指定 `key` 和 `value` 的生成规则：
-
-    ```yaml
-      columns:
-        - name: t_map_varchar  # map<varchar(255),varchar(255)>
-          key:
-            format: "key-{{%d}}"
-            gen:
-              # 从 0 开始自增
-              inc:
-          value:
-            length: {min: 20, max: 50}
-    ```
-
-2. ARRAY 类型，用 `element` 指定元素的生成规则：
-
-    ```yaml
-    columns:
-      - name: t_array_string  # array<text>
-        length: {min: 1, max: 10}
-        element:
-          gen:
-            enum: [foo, bar, foobar]
-    ```
-
-3. STRUCT 类型，用 `fields` 或 `field` 指定每一个字段的生成规则：
-
-    ```yaml
-    columns:
-      - name: t_struct_nested  # struct<foo:text, struct_field:array<text>>
-        fields:
-          - name: foo
-            length: 3
-          - name: struct_field
-            length: 10
-            element:
-              null_frequency: 0
-              length: 2
-    ```
-
-4. JSON/JSONB/VARIANT 类型，用 `structure` 指定结构：
-
-    ```yaml
-    columns:
-      - name: json1
-        structure: |
-          struct<
-            c1: varchar(3),
-            c2: struct<array_field: array<text>>,  # 支持嵌套类型
-            c3: boolean
-          >
-        fields:
-          - name: c1
-            length: 1
-            null_frequency: 0
-          - name: c2
-            fields:
-              - name: array_field
-                length: 1
-                element:
-                  format: "nested array element: {{%s}}"
-                  null_frequency: 0
-                  length: 2
-    ```
-
-5. 对于 HLL 类型，默认值为 `hll_empty()`，你也可以指定从同一张表的其他列生成：
-
-    ```yaml
-    columns:
-      - name: t_hll # t_hll 的值将为 `hll_hash(t_str)`
-        from: t_str
-    ```
-
 #### gen
 
 可选自定义生成器，支持以下几种，必须在 `gen:` 的下面定义：
@@ -407,9 +330,8 @@ columns:
     # `length` won't work, override by `gen`
     # length: 10
     gen:
-      inc:
-        start: 100  # 从 100 开始（默认 0）
-        step: 2     # 步长为 2（默认 1）
+      inc: 2      # 步长为 2（默认 1）
+      start: 100  # 从 100 开始（默认 0）
 ```
 
 ##### enum
@@ -419,8 +341,6 @@ columns:
 ```yaml
 columns:
   - name: t_null_string
-    null_frequency: 0.5
-    format: "What's your name? My name is {{%s}}."
     gen:
       enum: [foo, bar, foobar]
       weights: [0.2, 0.6, 0.2]  # 可选，指定各值被选中的概率
@@ -519,7 +439,7 @@ columns:
       #   - name: foo
       #     gen:
       #       inc:
-      #         start: 1000
+      #       start: 1000
 ```
 
 ##### golang
@@ -539,6 +459,83 @@ columns:
             return fmt.Sprintf("Is odd: %v.", i%2 == 1)
         }
 ```
+
+#### 复杂类型 map/array/struct/json/variant
+
+复合类型有特殊的生成规则：
+
+- MAP 类型，可分别指定 `key` 和 `value` 的生成规则：
+
+    ```yaml
+      columns:
+        - name: t_map_varchar  # map<varchar(255),varchar(255)>
+          key:
+            format: "key-{{%d}}"
+            gen:
+              # 从 0 开始自增，步长为 1
+              inc:
+          value:
+            length: {min: 20, max: 50}
+    ```
+
+- ARRAY 类型，用 `element` 指定元素的生成规则：
+
+    ```yaml
+    columns:
+      - name: t_array_string  # array<text>
+        length: {min: 1, max: 10}
+        element:
+          gen:
+            enum: [foo, bar, foobar]
+    ```
+
+- STRUCT 类型，用 `fields` 或 `field` 指定每一个字段的生成规则：
+
+    ```yaml
+    columns:
+      - name: t_struct_nested  # struct<foo:text, struct_field:array<text>>
+        fields:
+          - name: foo
+            length: 3
+          - name: struct_field
+            length: 10
+            element:
+              null_frequency: 0
+              length: 2
+    ```
+
+- JSON/JSONB/VARIANT 类型，用 `structure` 指定结构：
+
+    ```yaml
+    columns:
+      - name: json1
+        structure: |
+          struct<
+            c1: varchar(3),
+            c2: struct<array_field: array<text>>,  # 支持嵌套类型
+            c3: boolean
+          >
+        fields:
+          - name: c1
+            length: 1
+            null_frequency: 0
+          - name: c2
+            fields:
+              - name: array_field
+                length: 1
+                element:
+                  format: "nested array element: {{%s}}"
+                  null_frequency: 0
+                  length: 2
+    ```
+
+- HLL 类型，默认值为 `hll_empty()`，你也可以指定从同一张表的其他列生成：
+
+    ```yaml
+    columns:
+      - name: t_hll # t_hll 的值将为 `hll_hash(t_str)`
+        from: t_str
+    ```
 
 ### AI 生成数据（使用 OpenAI/Deepseek）
 
@@ -647,7 +644,7 @@ dodo replay -f output/q0.sql
 除了命令行传参，还有两种方式：
 
 1. 通过前缀为 `DORIS_xxx` 的大写环境变量传参，比如 `DORIS_HOST=xxx` 等价于  `--host xxx`
-2. 通过配置文件传参，比如 `dodo --config-file xxx.yaml`，见 [example](./example/example.dodo.yaml)
+2. 通过配置文件传参，比如 `dodo --config xxx.yaml`，见 [example](./example/example.dodo.yaml)
 
 参数优先级由高到低：
 

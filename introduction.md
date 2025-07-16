@@ -15,7 +15,6 @@
     - [precision/scale](#precisionscale)
     - [length](#length)
     - [format](#format)
-    - [Complex Types (map/array/struct/json/variant)](#complex-types-maparraystructjsonvariant)
     - [gen](#gen)
       - [inc](#inc)
       - [enum](#enum)
@@ -23,6 +22,7 @@
       - [ref](#ref)
       - [type](#type)
       - [golang](#golang)
+    - [Complex Types](#complex-types-maparraystructjsonvariant)
   - [AI Generation](#ai-generationvia-openaideepseek)
 - [Replay](#replay)
   - [Replay Speed and Concurrency](#replay-speed-and-concurrency)
@@ -297,7 +297,7 @@ columns:
 
 No matter what generation rule, there always can have a `format`, which will run after the column data generation, generate a string basing on the template, and then output it to CSV file. There're two types of tags (aka. placeholders) can be used in `format`:
 
-1. Format the return value of the column, such as `{{%s}}` or `{{%d}}`, etc., with the same syntax as Go's `fmt.Sprintf()`. There can only have one such label in a `format` (except using [`parts`](#parts)).
+1. Format the return value of the column, such as `{{%s}}` or `{{%d}}`, etc., with the same syntax as Go's `fmt.Sprintf()`. There can only be one such label in a `format` (except using [`parts`](#parts)).
 2. Built-in tags such as `{{month}}`, `{{year}}`, etc, all built-in tags can be found in: [src/generator/README.md](./src/generator/README.md#format-tags).
 
 For example:
@@ -312,83 +312,6 @@ columns:
 ```
 
 Note: If the generator returns NULL, format will also return NULL.
-
-#### Complex types map/array/struct/json/variant
-
-Complex types have special generation rules:
-
-1. For MAP types, you can specify generation rules for `key` and `value` separately:
-
-    ```yaml
-      columns:
-        - name: t_map_varchar  # map<varchar(255),varchar(255)>
-          key:
-            format: "key-{{%d}}"
-            gen:
-              # Auto-increment starting from 0
-              inc:
-          value:
-            length: {min: 20, max: 50}
-    ```
-
-2. For ARRAY types, use `element` to specify the generation rules for its elements:
-
-    ```yaml
-    columns:
-      - name: t_array_string  # array<text>
-        length: {min: 1, max: 10} # Specifies the number of elements in the array
-        element: # Specifies the rules for each element
-          gen:
-            enum: [foo, bar, foobar]
-    ```
-
-3. For STRUCT types, use `fields` or `field` to specify the generation rules for each field:
-
-    ```yaml
-    columns:
-      - name: t_struct_nested  # struct<foo:text, struct_field:array<text>>
-        fields:
-          - name: foo
-            length: 3
-          - name: struct_field
-            length: 10 # Refers to the length of the array for struct_field
-            element: # Specifies rules for elements if struct_field is an array or map
-              null_frequency: 0
-              length: 2 # Refers to the length of each string element in the array
-    ```
-
-4. For JSON/JSONB/VARIANT types, use `structure` to specify the structure:
-
-    ```yaml
-    columns:
-      - name: json1
-        structure: |
-          struct<
-            c1: varchar(3),
-            c2: struct<array_field: array<text>>,  # Supports nested types
-            c3: boolean
-          >
-        fields: # Corresponds to the fields defined in 'structure'
-          - name: c1 # Rules for c1
-            length: 1
-            null_frequency: 0
-          - name: c2 # Rules for c2 (which is a struct)
-            fields: # Nested fields for c2
-              - name: array_field # Rules for array_field within c2
-                length: 1 # Length of the array
-                element: # Rules for elements of array_field
-                  format: "nested array element: {{%s}}"
-                  null_frequency: 0
-                  length: 2 # Length of each string element in the array
-    ```
-
-5. For HLL types, the default value is `hll_empty()`, you can set its value from other column at the same table:
-
-    ```yaml
-    columns:
-      - name: t_hll # The value of t_hll will be `hll_hash(t_str)`
-        from: t_str
-    ```
 
 #### gen
 
@@ -410,9 +333,8 @@ columns:
     # `length` won't work, override by `gen`
     # length: 10
     gen:
-      inc:
-        start: 100  # Starts from 100 (default 0)
-        step: 2     # Step is 2 (default 1)
+      inc: 2      # Step is 2 (default 1)
+      start: 100  # Starts from 100 (default 0)
 ```
 
 ##### enum
@@ -422,8 +344,6 @@ Enum generator, randomly selects from given values, values can be literals or ge
 ```yaml
 columns:
   - name: t_null_string
-    null_frequency: 0.5
-    format: "What's your name? My name is {{%s}}."
     gen:
       enum: [foo, bar, foobar]
       weights: [0.2, 0.6, 0.2]  # Optional, specifies the probability of each value being selected
@@ -522,7 +442,7 @@ columns:
       #   - name: foo
       #     gen:
       #       inc:
-      #         start: 1000
+      #       start: 1000
 ```
 
 ##### golang
@@ -542,6 +462,83 @@ columns:
             return fmt.Sprintf("Is odd: %v.", i%2 == 1)
         }
 ```
+
+#### Complex types map/array/struct/json/variant
+
+Complex types have special generation rules:
+
+- For MAP types, you can specify generation rules for `key` and `value` separately:
+
+    ```yaml
+      columns:
+        - name: t_map_varchar  # map<varchar(255),varchar(255)>
+          key:
+            format: "key-{{%d}}"
+            gen:
+              # Auto-increment starting from 0, step is 1
+              inc:
+          value:
+            length: {min: 20, max: 50}
+    ```
+
+- For ARRAY types, use `element` to specify the generation rules for its elements:
+
+    ```yaml
+    columns:
+      - name: t_array_string  # array<text>
+        length: {min: 1, max: 10} # Specifies the number of elements in the array
+        element: # Specifies the rules for each element
+          gen:
+            enum: [foo, bar, foobar]
+    ```
+
+- For STRUCT types, use `fields` or `field` to specify the generation rules for each field:
+
+    ```yaml
+    columns:
+      - name: t_struct_nested  # struct<foo:text, struct_field:array<text>>
+        fields:
+          - name: foo
+            length: 3
+          - name: struct_field
+            length: 10 # Refers to the length of the array for struct_field
+            element: # Specifies rules for elements if struct_field is an array or map
+              null_frequency: 0
+              length: 2 # Refers to the length of each string element in the array
+    ```
+
+- For JSON/JSONB/VARIANT types, use `structure` to specify the structure:
+
+    ```yaml
+    columns:
+      - name: json1
+        structure: |
+          struct<
+            c1: varchar(3),
+            c2: struct<array_field: array<text>>,  # Supports nested types
+            c3: boolean
+          >
+        fields: # Corresponds to the fields defined in 'structure'
+          - name: c1 # Rules for c1
+            length: 1
+            null_frequency: 0
+          - name: c2 # Rules for c2 (which is a struct)
+            fields: # Nested fields for c2
+              - name: array_field # Rules for array_field within c2
+                length: 1 # Length of the array
+                element: # Rules for elements of array_field
+                  format: "nested array element: {{%s}}"
+                  null_frequency: 0
+                  length: 2 # Length of each string element in the array
+    ```
+
+- For HLL types, the default value is `hll_empty()`, you can set its value from other column at the same table:
+
+    ```yaml
+    columns:
+      - name: t_hll # The value of t_hll will be `hll_hash(t_str)`
+        from: t_str
+    ```
 
 ### AI Generation（via OpenAI/Deepseek）
 
@@ -650,7 +647,7 @@ When the installation is complete or when you execute the command above, it will
 Besides command-line arguments, there are two other ways:
 
 1. Pass parameters through uppercase environment variables prefixed with `DORIS_xxx`, e.g., `DORIS_HOST=xxx` is equivalent to `--host xxx`.
-2. Pass parameters through a configuration file, e.g., `dodo --config-file xxx.yaml`. See [example](./example/example.dodo.yaml).
+2. Pass parameters through a configuration file, e.g., `dodo --config xxx.yaml`. See [example](./example/example.dodo.yaml).
 
 Parameter priority from high to low:
 

@@ -17,7 +17,6 @@ import (
 
 const (
 	AnonymizeHashBytes = 8
-	AnonymizeHashFmt   = "h%x" // add prefix 'h'
 )
 
 var (
@@ -74,9 +73,9 @@ func StoreMiniHashDict(method, hashdictPath string) {
 		logrus.Errorf("Failed to store hash dict file, err: %v\n", err)
 		return
 	}
-	defer b.Close()
 
 	if err = yaml.NewEncoder(b).Encode(miniDict); err != nil {
+		_ = b.Close()
 		logrus.Errorf("Failed to encode hash dict file, err: %v\n", err)
 		return
 	}
@@ -163,7 +162,7 @@ func anonymizeHashSliceToMap(xs []string) map[string]string {
 func anonymizeHashStr(h *blake3.Hasher, s string) string {
 	b := hashstr(h, s)
 
-	return fmt.Sprintf(AnonymizeHashFmt, b[:AnonymizeHashBytes])
+	return fmt.Sprintf("%x", b[:AnonymizeHashBytes])
 }
 
 func minifyHash(dict map[string]string, s string) string {

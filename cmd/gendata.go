@@ -77,7 +77,7 @@ Example:
 		if err := completeGendataConfig(); err != nil {
 			return err
 		}
-		GlobalConfig.Parallel = lo.Min([]int{GlobalConfig.Parallel, len(GendataConfig.genFromDDLs)})
+		GlobalConfig.Parallel = min(GlobalConfig.Parallel, len(GendataConfig.genFromDDLs))
 
 		logrus.Infof("Generate data for %d table(s), parallel: %d\n", len(GendataConfig.genFromDDLs), GlobalConfig.Parallel)
 		if len(GendataConfig.genFromDDLs) == 0 {

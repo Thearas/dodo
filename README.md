@@ -105,6 +105,10 @@ dodo diff --min-duration-diff 200ms --original-sqls 'output/sql/*.sql' output/re
 dodo diff replay1/ replay2/
 ```
 
+### Config
+
+You may want to pass parameters by config file or environment, see [Environment Variables and Configuration Files](./introduction.md#environment-variables-and-configuration-files).
+
 ### Generate Data
 
 Generate CSV data from create-table SQLs. All databases with similar syntax as Doris are supported, like MySQL, Hive, etc.
@@ -146,10 +150,6 @@ KW☆{"foo":7}☆2019-02-02
 
 > [!NOTE]
 > Keep `./dodo_hashdict.yaml` if you want the result to be consistent (put it at current directory, or specify by `--anonymize-minihash-dict`).
-
-### Config
-
-You may want to pass parameters by config file or environment, see `dodo --help` and [example](./example/example.dodo.yaml).
 
 ## Build
 

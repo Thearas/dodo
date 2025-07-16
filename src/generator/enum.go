@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"math/rand/v2"
+	"sort"
 
 	"github.com/brianvoe/gofakeit/v7"
 	"github.com/samber/lo"
@@ -15,8 +16,9 @@ import (
 var _ Gen = &EnumGen{}
 
 type EnumGen struct {
-	Enum    []any     `yaml:"enum,omitempty"`
-	Weights []float32 `yaml:"weights,omitempty"`
+	Enum              []any     `yaml:"enum,omitempty"`
+	Weights           []float32 `yaml:"weights,omitempty"`
+	cumulativeWeights []float32
 }
 
 func (g *EnumGen) Gen() any {
@@ -34,14 +36,11 @@ func (g *EnumGen) gen() any {
 	}
 
 	weight := rand.Float32()
-	for i, w := range g.Weights {
-		weight -= w
-		if weight < 0 {
-			return g.Enum[i]
-		}
-	}
-
-	panic("EnumGen.Gen(): unreachable")
+	// Use binary search on cumulative weights for efficient selection.
+	i := sort.Search(len(g.cumulativeWeights), func(i int) bool {
+		return g.cumulativeWeights[i] > weight
+	})
+	return g.Enum[i]
 }
 
 func NewEnumGenerator(visitor *TypeVisitor, dataType parser.IDataTypeContext, r GenRule) (Gen, error) {
@@ -80,8 +79,19 @@ func NewEnumGenerator(visitor *TypeVisitor, dataType parser.IDataTypeContext, r 
 		return nil, errors.New("sum of weights should be 1")
 	}
 
+	cumulativeWeights := make([]float32, len(weights))
+	var sum float32
+	for i, w := range weights {
+		sum += w
+		cumulativeWeights[i] = sum
+	}
+	if len(cumulativeWeights) > 0 {
+		cumulativeWeights[len(cumulativeWeights)-1] = 1
+	}
+
 	return &EnumGen{
-		Enum:    enum,
-		Weights: weights,
+		Enum:              enum,
+		Weights:           weights,
+		cumulativeWeights: cumulativeWeights,
 	}, nil
 }

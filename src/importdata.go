@@ -23,15 +23,15 @@ func StreamLoad(ctx context.Context, host, httpPort, user, password, db, table, 
 		logrus.Errorf("Open data file '%s' failed\n", file)
 		return err
 	}
-	defer f.Close()
-	r := bufio.NewScanner(f)
-	if !r.Scan() {
-		return fmt.Errorf("data file '%s' is empty", file)
+	r := bufio.NewReader(f)
+	columns, err := r.ReadString('\n')
+	if err != nil || len(columns) == 0 {
+		_ = f.Close()
+		return fmt.Errorf("data file '%s' is unreadable or empty", file)
 	}
 
 	skipLines := 1
-	columns := r.Text()
-	if !strings.HasPrefix(columns, "columns:") {
+	if !strings.HasPrefix(columns, GenDataFileFirstLinePrefix) {
 		skipLines = 0
 		columns = ""
 	}

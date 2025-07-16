@@ -1,3 +1,5 @@
+# dodo --config example-replay.dodo.yaml
+
 # doris frontend
 host: 127.0.0.1
 port: 9030

@@ -112,5 +112,5 @@ PROPERTIES (
 
 	resultCSV := strings.Split(b.String(), "\n")
 	assert.Len(t, resultCSV, 1+tg.Rows) // first line is columns info
-	assert.True(t, strings.HasPrefix(resultCSV[0], "columns:"))
+	assert.True(t, strings.HasPrefix(resultCSV[0], GenDataFileFirstLinePrefix))
 }

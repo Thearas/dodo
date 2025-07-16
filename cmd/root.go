@@ -51,8 +51,9 @@ type Global struct {
 	HTTPPort   uint16
 	DBUser     string
 	DBPassword string
-	DBs        []string
-	Tables     []string
+	// Catalog    string
+	DBs    []string
+	Tables []string
 }
 
 // rootCmd represents the base command when called without any subcommands
@@ -110,6 +111,7 @@ func init() {
 	pFlags.Uint16Var(&GlobalConfig.HTTPPort, "http-port", 8030, "FE HTTP Port")
 	pFlags.StringVarP(&GlobalConfig.DBUser, "user", "U", "root", "DB User")
 	pFlags.StringVar(&GlobalConfig.DBPassword, "password", "", "DB password")
+	// pFlags.StringVarP(&GlobalConfig.Catalog, "catalog", "C", "", "Catalog to work on")
 	pFlags.StringSliceVarP(&GlobalConfig.DBs, "dbs", "D", []string{}, "DBs to work on")
 	pFlags.StringSliceVarP(&GlobalConfig.Tables, "tables", "T", []string{}, "Tables to work on")
 

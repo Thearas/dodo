@@ -57,7 +57,7 @@ Example:
 		if err := completeCreateConfig(); err != nil {
 			return err
 		}
-		GlobalConfig.Parallel = lo.Min([]int{GlobalConfig.Parallel, len(createTableDDLs)})
+		GlobalConfig.Parallel = min(GlobalConfig.Parallel, len(createTableDDLs))
 
 		logrus.Infof("Create %d table(s) and %d view(s), parallel: %d\n", len(createTableDDLs), len(createOtherDDLs), GlobalConfig.Parallel)
 

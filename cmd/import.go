@@ -65,7 +65,7 @@ Example:
 			logrus.Infoln("No table data file found")
 			return nil
 		}
-		GlobalConfig.Parallel = lo.Min([]int{GlobalConfig.Parallel, len(ImportConfig.table2datafiles)})
+		GlobalConfig.Parallel = min(GlobalConfig.Parallel, len(ImportConfig.table2datafiles))
 
 		logrus.Infof("Import data for %d tables, parallel: %d\n", len(ImportConfig.table2datafiles), GlobalConfig.Parallel)
 

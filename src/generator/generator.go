@@ -287,10 +287,7 @@ func (v *TypeVisitor) getTypeGen(baseType string, type_ parser.IDataTypeContext)
 			}
 
 			// TODO: Support larger precision
-			intLen := precision - scale
-			if intLen > MAX_DECIMAL_INT_LEN {
-				intLen = MAX_DECIMAL_INT_LEN
-			}
+			intLen := min(precision-scale, MAX_DECIMAL_INT_LEN)
 
 			g = NewFuncGen(func() any {
 				var res [2]int64
@@ -298,12 +295,12 @@ func (v *TypeVisitor) getTypeGen(baseType string, type_ parser.IDataTypeContext)
 					res[0] = 0
 				} else if minVal < 0 && rand.Float32() < 0.5 {
 					delta := -float64(minVal)
-					n := int64(math.Min(delta, math.Pow10(intLen)-1))
+					n := int64(min(delta, math.Pow10(intLen)-1))
 					res[0] = -rand.Int64N(n)
 				} else {
-					delta := float64(maxVal) - math.Max(0, float64(minVal)) + 1
-					lowerBound := int64(math.Max(0, float64(minVal)))
-					n := int64(math.Min(delta, math.Pow10(intLen)-1))
+					delta := float64(maxVal) - max(0, float64(minVal)) + 1
+					lowerBound := int64(max(0, float64(minVal)))
+					n := int64(min(delta, math.Pow10(intLen)-1))
 					res[0] = lowerBound + rand.Int64N(n)
 				}
 
@@ -324,19 +321,19 @@ func (v *TypeVisitor) getTypeGen(baseType string, type_ parser.IDataTypeContext)
 			g = NewFuncGen(func() any { return gofakeit.DateRange(minVal, maxVal).Format("2006-01-02 15:04:05") })
 		case "TEXT", "STRING":
 			lenMin, lenMax := v.GetLength()
-			lenMin = lo.Max([]int{1, lenMin})
-			lenMax = lo.Max([]int{1, lenMax})
+			lenMin = max(1, lenMin)
+			lenMax = max(1, lenMax)
 			g = NewFuncGen(func() any { return RandomStr(lenMin, lenMax) })
 		case "VARCHAR":
 			var (
 				length         int
 				lenMin, lenMax = v.GetLength()
 			)
-			lenMin = lo.Max([]int{1, lenMin})
-			lenMax = lo.Max([]int{1, lenMax})
+			lenMin = max(1, lenMin)
+			lenMax = max(1, lenMax)
 			length_ := ty.INTEGER_VALUE(0)
 			if length_ != nil {
-				length = lo.Max([]int{1, cast.ToInt(length_.GetText())})
+				length = max(1, cast.ToInt(length_.GetText()))
 			} else {
 				length = lenMax
 			}
@@ -352,10 +349,7 @@ func (v *TypeVisitor) getTypeGen(baseType string, type_ parser.IDataTypeContext)
 			if length_ == nil {
 				logrus.Fatalf("CHAR type must have a length in column '%s'\n", v.Colpath)
 			}
-			length := lo.Max([]int{1, cast.ToInt(length_.GetText())})
-			if length > 255 {
-				length = 255
-			}
+			length := min(max(1, cast.ToInt(length_.GetText())), 255)
 			g = NewFuncGen(func() any { return RandomStr(length, length) })
 		case "IPV4":
 			g = NewFuncGen(func() any { return gofakeit.IPv4Address() })

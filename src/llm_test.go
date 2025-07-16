@@ -144,7 +144,7 @@ from (
                         'Asia/Shanghai',
                         'Asia/Shanghai'
                     )
-                    and day BETWEEN date_sub('2020-05-25', INTERVAL 1 DAY)
+                    and ya BETWEEN date_sub('2020-05-25', INTERVAL 1 DAY)
                     and date_add('2020-05-25', INTERVAL 1 DAY)
                 union all
                 select distinct concat('-', CONCAT_WS('_', l, k, j)) ia
@@ -160,7 +160,7 @@ from (
                         'Asia/Shanghai',
                         'Asia/Shanghai'
                     )
-                    and day BETWEEN date_sub('2020-05-25', INTERVAL 1 DAY)
+                    and ya BETWEEN date_sub('2020-05-25', INTERVAL 1 DAY)
                     and date_add('2020-05-25', INTERVAL 1 DAY)
                 union all
                 select distinct concat('-', CONCAT_WS('_', l, k, j)) ia
@@ -176,10 +176,10 @@ from (
                         'Asia/Shanghai',
                         'Asia/Shanghai'
                     )
-                    and day BETWEEN date_sub('2020-05-25', INTERVAL 1 DAY)
+                    and ya BETWEEN date_sub('2020-05-25', INTERVAL 1 DAY)
                     and date_add('2020-05-25', INTERVAL 1 DAY)
             ) ma on ma.ia = oa.wa
-        where oa.wa is null
+        where oa.wa is not null
     ) ha,
     (
         select COALESCE (max (va), 0) la
@@ -193,7 +193,7 @@ order by 1,2;
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got, err := LLMGendataConfig(tt.args.ctx, tt.args.apiKey, tt.args.baseURL, "deepseek-chat", "", tt.args.tables, tt.args.columnStats, tt.args.sqls)
+			got, err := LLMGendataConfig(tt.args.ctx, tt.args.apiKey, tt.args.baseURL, "deepseek-chat", "每张表 10w 行", tt.args.tables, tt.args.columnStats, tt.args.sqls)
 			if (err != nil) != tt.wantErr {
 				t.Errorf("LLMGendataConfig() error = %v, wantErr %v", err, tt.wantErr)
 				return
