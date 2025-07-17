@@ -205,7 +205,7 @@ order by 1,2;
 			assert.IsType(t, []any{}, gotData["tables"])
 			assert.True(t, lo.ContainsBy(gotData["tables"].([]any), func(item any) bool {
 				table := item.(map[string]any)
-				return table["name"] == "c"
+				return table["name"] == "c" && table["row_count"] == 100_000
 			}))
 		})
 	}

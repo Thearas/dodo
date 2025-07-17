@@ -8,6 +8,7 @@ import (
 
 	"github.com/brianvoe/gofakeit/v7"
 	"github.com/goccy/go-json"
+	"github.com/samber/lo"
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/cast"
 	"gopkg.in/yaml.v3"
@@ -25,16 +26,19 @@ func MergeGenRules(dst, src GenRule, overwrite bool) {
 }
 
 func CloneGenRules(src any) any {
-	r, ok := src.(GenRule)
-	if !ok {
-		return src
+	// if src is a slice, copy its elements
+	if s, ok := src.([]any); ok {
+		return lo.Map(s, func(v any, _ int) any { return CloneGenRules(v) })
 	}
 
-	dst := make(GenRule, len(r))
-	for k, v := range r {
-		dst[k] = CloneGenRules(v)
+	// if src is a GenRule, copy its values
+	r, ok := src.(GenRule)
+	if ok {
+		return lo.MapValues(r, func(v any, _ string) any { return CloneGenRules(v) })
 	}
-	return dst
+
+	// otherwise, return the original value
+	return src
 }
 
 func CastMinMax[R int8 | int16 | int | int32 | int64 | float32 | float64 | time.Time](min_, max_ any, baseType, colpath string, errmsg ...string) (R, R) {

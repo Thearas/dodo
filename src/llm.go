@@ -79,8 +79,8 @@ func LLMGendataConfig(
 		Stop:        stop,
 		Messages: []openai.ChatCompletionMessageParamUnion{
 			openai.SystemMessage(prompt.Gendata),
-			openai.UserMessage(userPrompt),
 			openai.AssistantMessage(LLMOutputPrefix),
+			openai.UserMessage(userPrompt),
 		},
 	})
 	defer c.Close()

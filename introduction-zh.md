@@ -165,9 +165,9 @@ dodo import --tables db1.table1 --data 'my_table/*.csv'
 
 1. 在生成阶段：
 
-    1. 扫描导出目录 `output/ddl/` 下、符合要求的 `<db>.<table>.table.sql` 文件。导出目录可以用 `--ddl` 指定
+    1. 扫描导出目录 `output/ddl/` 下、符合要求的 `<db>.<table>.table.sql` 文件。导出目录（或具体的 `<basename>.sql` 文件）可以用 `--ddl` 指定
     2. 结合对应的统计信息文件 `<db>.stats.yaml` 与自定义生成规则文件（由 `--genconf` 指定），算出最终的生成规则
-    3. 根据生成规则，生成 CSV 到数据生成目录 `output/gendata/<db>.<table>/`
+    3. 根据生成规则，生成 CSV 到数据生成目录 `output/gendata/<db>.<table>/`（或 `output/gendata/<basename>/`）
 2. 在导入阶段：
 
     1. 扫描数据生成目录 `output/gendata/` 下、符合要求的 `<db>.<table>/*` 数据文件。数据生成目录可以用 `--data` 指定

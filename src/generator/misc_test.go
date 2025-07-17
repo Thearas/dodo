@@ -13,6 +13,7 @@ func TestMergeGenRule(t *testing.T) {
 		"max":    6,
 		"length": GenRule{"min": 1, "max": 5},
 		"gen":    GenRule{"type": "string", "length": GenRule{"min": 5, "max": 10}},
+		"extra":  GenRule{"k1": GenRule{"k1_1": 1}, "k2": []any{1, 2, 3}},
 	}
 	dst := GenRule{
 		"max":    10,
@@ -25,7 +26,12 @@ func TestMergeGenRule(t *testing.T) {
 		"max":    10,
 		"length": GenRule{"max": 10},
 		"gen":    GenRule{"type": "varchar(10)", "min": 5, "max": 10},
+		"extra":  GenRule{"k1": GenRule{"k1_1": 1}, "k2": []any{1, 2, 3}},
 	}, dst)
+	// changes of dst won't affect src
+	dst["extra"].(GenRule)["k1"].(GenRule)["k1_1"] = 2
+	dst["extra"].(GenRule)["k2"].([]any)[0] = 2
+	assert.Equal(t, GenRule{"k1": GenRule{"k1_1": 1}, "k2": []any{1, 2, 3}}, src["extra"])
 
 	// with overrides
 	src = GenRule{

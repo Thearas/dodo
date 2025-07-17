@@ -76,18 +76,23 @@ func (v *TypeVisitor) GetGen(type_ parser.IDataTypeContext) Gen {
 
 	// 1. custom generator
 	if customGenRule, ok := v.GetRule("gen").(GenRule); ok {
-		var g_ Gen
-		for name, customGenerator := range CustomGenConstructors {
+		var (
+			g_      Gen
+			genName string
+		)
+		for name, newCustomGen := range CustomGenConstructors {
 			if _, ok := customGenRule[name]; !ok {
 				continue
 			}
+			if g_ != nil {
+				logrus.Fatalf("Multiple custom generators found for column '%s', only one is allowed, but got both: %s and %s\n", v.Colpath, genName, name)
+			}
 
-			g_, err = customGenerator(v, type_, customGenRule)
+			g_, err = newCustomGen(v, type_, customGenRule)
 			if err != nil {
 				logrus.Fatalf("Invalid custom generator '%s' for column '%s', err: %v\n", name, v.Colpath, err)
 			}
-			break
-
+			genName = name
 		}
 		g = g_
 		if g == nil {

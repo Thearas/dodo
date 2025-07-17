@@ -53,9 +53,9 @@ In implementation, the tool performs these actions in two stages based on the `-
 
 1. In the generation stage:
 
-    1. Scans the dump directory `output/ddl/` for matching `<db>.<table>.table.sql` files. The dump directory can be specified with `--ddl`.
+    1. Scans the dump directory `output/ddl/` for matching `<db>.<table>.table.sql` files. The dump directory (or specific `<basename>.sql` files) can be specified with `--ddl`.
     2. Combines the corresponding statistics file `<db>.stats.yaml` with the custom generation rules file (specified by `--genconf`) to determine the final generation rules.
-    3. Generates CSV files into the data generation directory `output/gendata/<db>.<table>/` according to the generation rules.
+    3. Generates CSV files into the data generation directory `output/gendata/<db>.<table>/` (or `output/gendata/<basename>/`) according to the generation rules.
 2. In the import stage:
 
     1. Scans the data generation directory `output/gendata/` for matching `<db>.<table>/*` data files. The data generation directory can be specified with `--data`.
