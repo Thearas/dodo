@@ -331,7 +331,7 @@ columns:
     # length: 10
     gen:
       inc: 2      # 步长为 2（默认 1）
-      start: 100  # 从 100 开始（默认 0）
+      start: 100  # 从 100 开始（默认 1）
 ```
 
 ##### enum
@@ -354,6 +354,13 @@ columns:
         - format: "my name is {{username}}"
         - gen:
             enum: [1, 2, 3]
+
+  - name: t_json
+    gen:
+      # 随机选择一个结构来生成 JSON，各有 1/2 的概率被选中
+      enum:
+        - structure: struct<foo:int>
+        - structure: array<string>
 ```
 
 ##### parts
@@ -438,7 +445,7 @@ columns:
       # fields:
       #   - name: foo
       #     gen:
-      #       inc:
+      #       inc: 1
       #       start: 1000
 ```
 
@@ -472,8 +479,8 @@ columns:
           key:
             format: "key-{{%d}}"
             gen:
-              # 从 0 开始自增，步长为 1
-              inc:
+              # 从 1 开始自增，步长为 2
+              inc: 2
           value:
             length: {min: 20, max: 50}
     ```

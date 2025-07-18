@@ -619,9 +619,9 @@ func connectDB(db string) (*sqlx.DB, error) {
 	if db == "" {
 		return nil, errors.New("database name is required")
 	}
-	return src.NewDB(GlobalConfig.DBHost, GlobalConfig.DBPort, GlobalConfig.DBUser, GlobalConfig.DBPassword, db)
+	return src.NewDB(GlobalConfig.DBHost, GlobalConfig.DBPort, GlobalConfig.DBUser, GlobalConfig.DBPassword, GlobalConfig.Catalog, db)
 }
 
 func connectDBWithoutDBName() (*sqlx.DB, error) {
-	return src.NewDB(GlobalConfig.DBHost, GlobalConfig.DBPort, GlobalConfig.DBUser, GlobalConfig.DBPassword, "information_schema")
+	return src.NewDB(GlobalConfig.DBHost, GlobalConfig.DBPort, GlobalConfig.DBUser, GlobalConfig.DBPassword, GlobalConfig.Catalog, "information_schema")
 }

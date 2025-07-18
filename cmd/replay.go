@@ -181,7 +181,7 @@ func replay(ctx context.Context) error {
 
 	return src.ReplaySqls(
 		ctx,
-		GlobalConfig.DBHost, GlobalConfig.DBPort, GlobalConfig.DBUser, GlobalConfig.DBPassword, ReplayConfig.Cluster,
+		GlobalConfig.DBHost, GlobalConfig.DBPort, GlobalConfig.DBUser, GlobalConfig.DBPassword, GlobalConfig.Catalog, ReplayConfig.Cluster,
 		ReplayConfig.ReplayResultDir, clientSqls, ReplayConfig.Speed, ReplayConfig.MaxHashRows, ReplayConfig.MaxConnIdleTime,
 		minTs, GlobalConfig.Parallel,
 	)

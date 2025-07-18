@@ -164,8 +164,8 @@ tables:
         key:
           format: "key-{{%d}}"
           gen:
-            # default to start from 0, step is 1
-            inc:
+            # default to start from 1, step is 2
+            inc: 2
         value:
           length: {min: 20, max: 50}
 

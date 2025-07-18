@@ -334,7 +334,7 @@ columns:
     # length: 10
     gen:
       inc: 2      # Step is 2 (default 1)
-      start: 100  # Starts from 100 (default 0)
+      start: 100  # Starts from 100 (default 1)
 ```
 
 ##### enum
@@ -357,6 +357,13 @@ columns:
         - format: "my name is {{username}}"
         - gen:
             enum: [1, 2, 3]
+
+  - name: t_json
+    gen:
+      # randomly choose one structure, each has 50% probability
+      enum:
+        - structure: struct<foo:int>
+        - structure: array<string>
 ```
 
 ##### parts
@@ -441,7 +448,7 @@ columns:
       # fields: # Optional: Define rules for foo and bar if needed
       #   - name: foo
       #     gen:
-      #       inc:
+      #       inc: 1
       #       start: 1000
 ```
 
@@ -475,8 +482,8 @@ Complex types have special generation rules:
           key:
             format: "key-{{%d}}"
             gen:
-              # Auto-increment starting from 0, step is 1
-              inc:
+              # Auto-increment starting from 0, step is 2
+              inc: 2
           value:
             length: {min: 20, max: 50}
     ```

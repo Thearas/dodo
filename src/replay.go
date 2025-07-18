@@ -49,6 +49,7 @@ func (re *ReplayResult) String() string {
 type ReplayClient struct {
 	resultDir string
 	dbcfg     *mysql.Config
+	catalog   string
 	cluster   string
 
 	client          string
@@ -68,6 +69,10 @@ type ReplayClient struct {
 func (c *ReplayClient) conn(ctx context.Context, currdb string, reconnect ...bool) (*sqlx.Conn, error) {
 	if c.connect == nil || (len(reconnect) > 0 && reconnect[0]) {
 		c.Close(false)
+
+		if c.catalog != "" && c.catalog != "internal" {
+			currdb = c.catalog + "." + currdb
+		}
 
 		dbcfg := c.dbcfg
 		dbcfg.DBName = currdb
@@ -292,7 +297,7 @@ func (c *ReplayClient) replay(ctx context.Context) error {
 
 func ReplaySqls(
 	ctx context.Context,
-	host string, port uint16, user, password, cluster string,
+	host string, port uint16, user, password, catalog, cluster string,
 	resultDir string, clientSqls []ClientSqls, speed float32, maxHashRows int, maxConnIdleTime time.Duration,
 	minTs int64, parallel int,
 ) error {
@@ -341,6 +346,7 @@ func ReplaySqls(
 			cli := ReplayClient{
 				resultDir:       resultDir,
 				dbcfg:           dbcfg.Clone(),
+				catalog:         catalog,
 				cluster:         cluster,
 				client:          client,
 				sqls:            sqls,

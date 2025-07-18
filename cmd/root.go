@@ -22,19 +22,14 @@ import (
 	"runtime"
 	"strings"
 
-	"github.com/jmoiron/sqlx"
-	"github.com/samber/lo"
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 	"github.com/spf13/pflag"
 	"github.com/spf13/viper"
-
-	"github.com/Thearas/dodo/src"
 )
 
 var (
 	GlobalConfig    = Global{}
-	completionDB    *sqlx.DB
 	DefaultParallel = 10
 )
 
@@ -51,9 +46,9 @@ type Global struct {
 	HTTPPort   uint16
 	DBUser     string
 	DBPassword string
-	// Catalog    string
-	DBs    []string
-	Tables []string
+	Catalog    string
+	DBs        []string
+	Tables     []string
 }
 
 // rootCmd represents the base command when called without any subcommands
@@ -111,34 +106,9 @@ func init() {
 	pFlags.Uint16Var(&GlobalConfig.HTTPPort, "http-port", 8030, "FE HTTP Port")
 	pFlags.StringVarP(&GlobalConfig.DBUser, "user", "U", "root", "DB User")
 	pFlags.StringVar(&GlobalConfig.DBPassword, "password", "", "DB password")
-	// pFlags.StringVarP(&GlobalConfig.Catalog, "catalog", "C", "", "Catalog to work on")
+	pFlags.StringVar(&GlobalConfig.Catalog, "catalog", "", "Catalog to work on")
 	pFlags.StringSliceVarP(&GlobalConfig.DBs, "dbs", "D", []string{}, "DBs to work on")
 	pFlags.StringSliceVarP(&GlobalConfig.Tables, "tables", "T", []string{}, "Tables to work on")
-
-	// completion
-	rootCmd.RegisterFlagCompletionFunc("dbs", func(cmd *cobra.Command, _ []string, toComplete string) ([]string, cobra.ShellCompDirective) {
-		var (
-			items      = []string{}
-			splits     = strings.SplitAfterN(toComplete, ",", 2)
-			tocomplete = splits[0]
-			err        error
-		)
-		prefix := ""
-		if len(splits) > 1 {
-			prefix = splits[1] + ","
-		}
-
-		db := getCompletionDB()
-		if db != nil {
-			items, err = src.ShowDatabases(cmd.Context(), db, tocomplete)
-		}
-		if len(items) == 0 || err != nil {
-			items = []string{}
-		}
-		return lo.Map(items, func(item string, _ int) string {
-			return prefix + item
-		}), cobra.ShellCompDirectiveNoSpace | cobra.ShellCompDirectiveNoFileComp
-	})
 }
 
 // initConfig reads in config file and ENV variables if set.
@@ -224,16 +194,4 @@ func initLog() error {
 	logrus.SetOutput(os.Stderr)
 	logrus.SetFormatter(&logrus.TextFormatter{})
 	return nil
-}
-
-func getCompletionDB() *sqlx.DB {
-	if completionDB != nil {
-		return completionDB
-	}
-
-	db, err := connectDB("information_schema")
-	if err != nil {
-		return nil
-	}
-	return db
 }

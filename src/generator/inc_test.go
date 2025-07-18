@@ -22,7 +22,7 @@ func TestIncGenerator(t *testing.T) {
 				r:      GenRule{"inc": nil},
 				repeat: 3,
 			},
-			want:    []int64{0, 1, 2},
+			want:    []int64{1, 2, 3},
 			wantErr: false,
 		},
 		{

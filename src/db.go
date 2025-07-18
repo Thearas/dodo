@@ -87,7 +87,11 @@ type ColumnStats struct {
 	Method      string `yaml:"method"`
 }
 
-func NewDB(host string, port uint16, user, password, db string) (*sqlx.DB, error) {
+func NewDB(host string, port uint16, user, password, catalog, db string) (*sqlx.DB, error) {
+	if catalog != "" && catalog != "internal" {
+		db = catalog + "." + db
+	}
+
 	cfg := &mysql.Config{
 		User:                 user,
 		Passwd:               password,
