@@ -149,7 +149,7 @@ func (c *ReplayClient) writeResult(b []byte) (err error) {
 	if c.resultFile == nil {
 		// result file
 		resultFilePath := filepath.Join(c.resultDir, fmt.Sprintf("%s%s", c.client, ReplayResultFileExt))
-		c.resultFile, err = os.OpenFile(resultFilePath, os.O_WRONLY|os.O_CREATE|os.O_APPEND, 0600)
+		c.resultFile, err = os.OpenFile(resultFilePath, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0600)
 		if err != nil {
 			logrus.Errorf("open replay result file %s failed, err: %v\n", resultFilePath, err)
 			return err

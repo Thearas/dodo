@@ -79,35 +79,35 @@ var (
 			},
 		},
 		"TINYINT": {
-			"min": math.MinInt8,
+			"min": 0,
 			"max": math.MaxInt8,
 		},
 		"SMALLINT": {
-			"min": math.MinInt16,
+			"min": 0,
 			"max": math.MaxInt16,
 		},
 		"INT": {
-			"min": math.MinInt32,
+			"min": 0,
 			"max": math.MaxInt32,
 		},
 		"BIGINT": {
-			"min": math.MinInt32,
+			"min": 0,
 			"max": math.MaxInt32,
 		},
 		"LARGEINT": {
-			"min": math.MinInt32,
+			"min": 0,
 			"max": math.MaxInt32,
 		},
 		"FLOAT": {
-			"min": math.MinInt16,
+			"min": 0,
 			"max": math.MaxInt16,
 		},
 		"DOUBLE": {
-			"min": math.MinInt32,
+			"min": 0,
 			"max": math.MaxInt32,
 		},
 		"DECIMAL": {
-			"min": math.MinInt32,
+			"min": 0,
 			"max": math.MaxInt32,
 		},
 		"DATE": {

@@ -32,7 +32,7 @@ type:
 # tables generation rule
 tables:
   - name: employees
-    row_count: 100 # optional, default 1000 (specify by --rows)
+    row_count: 10000 # optional, default 1000 (specify by --rows)
     columns:
       - name: department_id
         null_frequency: 0.1 # 10% NULL

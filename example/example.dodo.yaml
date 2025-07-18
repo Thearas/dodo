@@ -1,10 +1,13 @@
-# dodo --config example.dodo.yaml
+# dodo dump --config example.dodo.yaml
 
-# doris frontend
+# FE
 host: 127.0.0.1
 port: 9030
 user: root
 password: '******'
+
+# the catalog to work with
+# catalog: hive_catalog
 
 # the databases and tables to work with (optional)
 dbs: [example]

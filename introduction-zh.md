@@ -100,7 +100,7 @@ output
 > [!NOTE]
 >
 > - 从日志文件导出时，`q0.sql` 对应第一个日志文件、`q1.sql` 对应第二个、以此类推；但从日志表导出时，只会写入到 `q0.sql`
-> - 导出结果会追加到前一次导出的 SQL 文件中，除非指定 `--clean`，删除之前的 `output/ddl` 和 `output/sql` 目录
+> - 每次导出都会覆盖掉到前一次导出的 SQL 文件
 
 ### 其他导出参数
 
@@ -192,14 +192,14 @@ dodo import --tables db1.table1 --data 'my_table/*.csv'
 | BITMAP | 5 | element: 0 - MaxInt32 |  |
 | HLL |  | hll_empty() |  |
 | TEXT/STRING/VARCHAR | 1 - 10 |  |  |
-| TINYINT |  | MinInt8 - MaxInt8 |  |
-| SMALLINT |  | MinInt16 - MaxInt16 |  |
-| INT |  | MinInt32 - MaxInt32 |  |
-| BIGINT |  | MinInt32 - MaxInt32 |  |
-| LARGEINT |  | MinInt32 - MaxInt32 |  |
-| FLOAT |  | MinInt16 - MaxInt16 | |
-| DOUBLE |  | MinInt32 - MaxInt32 |  |
-| DECIMAL |  | MinInt32 - MaxInt32 |  |
+| TINYINT |  | 0 - MaxInt8 |  |
+| SMALLINT |  | 0 - MaxInt16 |  |
+| INT |  | 0 - MaxInt32 |  |
+| BIGINT |  | 0 - MaxInt32 |  |
+| LARGEINT |  | 0 - MaxInt32 |  |
+| FLOAT |  | 0 - MaxInt16 | |
+| DOUBLE |  | 0 - MaxInt32 |  |
+| DECIMAL |  | 0 - MaxInt32 |  |
 | DATE |  | 10 years ago - now |  |
 | DATETIME |  | 10 years ago - now |  |
 
@@ -580,7 +580,7 @@ dodo replay -f output/q0.sql
 ```
 
 > [!NOTE]
-> 执行多次回放命令，结果会追加到前一次的结果中，除非指定 `--clean`，删除之前的 `output/replay` 目录
+> 每次回放都会覆盖掉前一次的回放结果文件。
 
 ---
 

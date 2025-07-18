@@ -80,14 +80,14 @@ Default generation rules for various types:
 | BITMAP | 5 | element: 0 - MaxInt32 |  |
 | HLL |  | hll_empty() |  |
 | TEXT/STRING/VARCHAR | 1 - 10 |  |  |
-| TINYINT |  | MinInt8 - MaxInt8 |  |
-| SMALLINT |  | MinInt16 - MaxInt16 |  |
-| INT |  | MinInt32 - MaxInt32 |  |
-| BIGINT |  | MinInt32 - MaxInt32 |  |
-| LARGEINT |  | MinInt32 - MaxInt32 |  |
-| FLOAT |  | MinInt16 - MaxInt16 | |
-| DOUBLE |  | MinInt32 - MaxInt32 |  |
-| DECIMAL |  | MinInt32 - MaxInt32 |  |
+| TINYINT |  | 0 - MaxInt8 |  |
+| SMALLINT |  | 0 - MaxInt16 |  |
+| INT |  | 0 - MaxInt32 |  |
+| BIGINT |  | 0 - MaxInt32 |  |
+| LARGEINT |  | 0 - MaxInt32 |  |
+| FLOAT |  | 0 - MaxInt16 | |
+| DOUBLE |  | 0 - MaxInt32 |  |
+| DECIMAL |  | 0 - MaxInt32 |  |
 | DATE |  | 10 years ago - now |  |
 | DATETIME |  | 10 years ago - now |  |
 
@@ -1001,7 +1001,7 @@ type:
 # tables generation rule
 tables:
   - name: employees
-    row_count: 100 # optional, default 1000 (specify by --rows)
+    row_count: 10000 # optional, default 1000 (specify by --rows)
     columns:
       - name: department_id
         null_frequency: 0.1 # 10% NULL

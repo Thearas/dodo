@@ -208,7 +208,7 @@ Example:
 			// Generate the tables with zero ref.
 			g := src.ParallelGroup(GlobalConfig.Parallel)
 			for _, tg := range zeroRefTableGens {
-				logrus.Infof("Generating data for table %s, rows: %d\n", tg.Name, tg.Rows)
+				logrus.Infof("Generating data for table: %s, rows: %d\n", tg.Name, tg.Rows)
 				g.Go(func() error {
 					rowsPerFile := min(GendataConfig.RowsPerFile, tg.Rows)
 					for i, end := range lo.RangeWithSteps(0, tg.Rows+rowsPerFile, rowsPerFile) {
@@ -235,7 +235,7 @@ Example:
 						}
 						_ = o.Close()
 					}
-					logrus.Infof("Finish generating data for table %s\n", tg.Name)
+					logrus.Infof("Finish generating data for table: %s\n", tg.Name)
 					return nil
 				})
 

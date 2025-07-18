@@ -100,7 +100,7 @@ output
 > [!NOTE]
 >
 > - When dumping from log files, `q0.sql` corresponds to the first log file, `q1.sql` to the second, and so on. However, when dumping from a log table, all queries are written to `q0.sql`.
-> - Dump results are appended to previously dump SQL files unless `--clean` is specified, which deletes the previous `output/ddl` and `output/sql` directories.
+> - Each dump will overwrite the previous dump SQL file.
 
 ### Other Dump Parameters
 
@@ -195,14 +195,14 @@ Default generation rules for various types:
 | BITMAP | 5 | element: 0 - MaxInt32 |  |
 | HLL |  | hll_empty() |  |
 | TEXT/STRING/VARCHAR | 1 - 10 |  |  |
-| TINYINT |  | MinInt8 - MaxInt8 |  |
-| SMALLINT |  | MinInt16 - MaxInt16 |  |
-| INT |  | MinInt32 - MaxInt32 |  |
-| BIGINT |  | MinInt32 - MaxInt32 |  |
-| LARGEINT |  | MinInt32 - MaxInt32 |  |
-| FLOAT |  | MinInt16 - MaxInt16 | |
-| DOUBLE |  | MinInt32 - MaxInt32 |  |
-| DECIMAL |  | MinInt32 - MaxInt32 |  |
+| TINYINT |  | 0 - MaxInt8 |  |
+| SMALLINT |  | 0 - MaxInt16 |  |
+| INT |  | 0 - MaxInt32 |  |
+| BIGINT |  | 0 - MaxInt32 |  |
+| LARGEINT |  | 0 - MaxInt32 |  |
+| FLOAT |  | 0 - MaxInt16 | |
+| DOUBLE |  | 0 - MaxInt32 |  |
+| DECIMAL |  | 0 - MaxInt32 |  |
 | DATE |  | 10 years ago - now |  |
 | DATETIME |  | 10 years ago - now |  |
 
@@ -583,7 +583,7 @@ dodo replay -f output/q0.sql
 ```
 
 > [!NOTE]
-> Executing the replay command multiple times will append results to the previous results, unless `--clean` is specified, which deletes the previous `output/replay` directory.
+> Each replay will overwrite the previous replay result file.
 
 ---
 

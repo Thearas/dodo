@@ -112,7 +112,7 @@ Example:
 			// view may depends on other tables/views
 			if needDeps != "" {
 				count++
-				if count > len(createOtherDDLs) {
+				if count > len(createOtherDDLs) || queue.Empty() {
 					return fmt.Errorf("ddl need depends, message: %s", needDeps)
 				}
 				queue.Enqueue(lo.Tuple2[string, int]{A: v, B: count})

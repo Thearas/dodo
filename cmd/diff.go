@@ -47,6 +47,9 @@ var diffCmd = &cobra.Command{
 	Example: `dodo diff replay1/ replay2/
 dodo diff --original-sqls dump.sql replay1/`,
 	SilenceUsage: true,
+	PersistentPreRunE: func(cmd *cobra.Command, _ []string) error {
+		return initConfig(cmd)
+	},
 	RunE: func(_ *cobra.Command, args []string) error {
 		if noColor {
 			if err := os.Setenv("NO_COLOR", "true"); err != nil {

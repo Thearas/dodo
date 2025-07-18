@@ -20,7 +20,7 @@ import (
 func RunCreateSQL(ctx context.Context, conn *sqlx.DB, db string, sqlFile string, beCount int, dryrun bool) (needDependence string, err error) {
 	ddl, err := os.ReadFile(sqlFile)
 	if err != nil {
-		return "", err
+		return "", fmt.Errorf("failed to read SQL file '%s': %v", sqlFile, err)
 	}
 
 	p := parser.NewParser(sqlFile, string(ddl), newCreateParserListener(beCount))
