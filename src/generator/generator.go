@@ -63,47 +63,24 @@ func NewTypeVisitor(colpath string, genRule GenRule) *TypeVisitor {
 }
 
 func (v *TypeVisitor) GetGen(type_ parser.IDataTypeContext) Gen {
-	baseType := v.GetBaseType(type_)
-	v.MergeDefaultRule(baseType) // Merge global (aka. default) generation rules.
+	var (
+		g        Gen
+		err      error
+		baseType = v.GetBaseType(type_)
+	)
+
+	// Merge global (aka. default) generation rules.
+	v.MergeDefaultRule(baseType)
 	if logrus.GetLevel() > logrus.DebugLevel {
 		logrus.Tracef("gen rule of '%s': %s\n", v.Colpath, string(MustJSONMarshal(v.GenRule)))
 	}
 
-	var (
-		g   Gen
-		err error
-	)
-
-	// 1. custom generator
 	if customGenRule, ok := v.GetRule("gen").(GenRule); ok {
-		var (
-			g_      Gen
-			genName string
-		)
-		for name, newCustomGen := range CustomGenConstructors {
-			if _, ok := customGenRule[name]; !ok {
-				continue
-			}
-			if g_ != nil {
-				logrus.Fatalf("Multiple custom generators found for column '%s', only one is allowed, but got both: %s and %s\n", v.Colpath, genName, name)
-			}
-
-			g_, err = newCustomGen(v, type_, customGenRule)
-			if err != nil {
-				logrus.Fatalf("Invalid custom generator '%s' for column '%s', err: %v\n", name, v.Colpath, err)
-			}
-			genName = name
-		}
-		g = g_
-		if g == nil {
-			logrus.Fatalf("Custom generator not found for column '%s', expect one of %v\n",
-				v.Colpath,
-				lo.MapToSlice(CustomGenConstructors, func(name string, _ CustomGenConstructor) string { return name }),
-			)
-		}
+		// 1. custom generator
+		g = v.getCustomGen(type_, customGenRule)
 	} else {
 		// 2. type generator
-		g = v.getTypeGen(baseType, type_)
+		g = v.getTypeGen(type_, baseType)
 	}
 
 	// format generator
@@ -130,7 +107,36 @@ func (v *TypeVisitor) GetGen(type_ parser.IDataTypeContext) Gen {
 	return g
 }
 
-func (v *TypeVisitor) getTypeGen(baseType string, type_ parser.IDataTypeContext) Gen {
+func (v *TypeVisitor) getCustomGen(type_ parser.IDataTypeContext, customGenRule GenRule) Gen {
+	var (
+		g       Gen
+		genName string
+		err     error
+	)
+	for name, newCustomGen := range CustomGenConstructors {
+		if _, ok := customGenRule[name]; !ok {
+			continue
+		}
+		if g != nil {
+			logrus.Fatalf("Multiple custom generators found for column '%s', only one is allowed, but got both: %s and %s\n", v.Colpath, genName, name)
+		}
+
+		g, err = newCustomGen(v, type_, customGenRule)
+		if err != nil {
+			logrus.Fatalf("Invalid custom generator '%s' for column '%s', err: %v\n", name, v.Colpath, err)
+		}
+		genName = name
+	}
+	if g == nil {
+		logrus.Fatalf("Custom generator not found for column '%s', expect one of %v\n",
+			v.Colpath,
+			lo.MapToSlice(CustomGenConstructors, func(name string, _ CustomGenConstructor) string { return name }),
+		)
+	}
+	return g
+}
+
+func (v *TypeVisitor) getTypeGen(type_ parser.IDataTypeContext, baseType string) Gen {
 	var g Gen
 	switch ty := type_.(type) {
 	case *parser.ComplexDataTypeContext:
@@ -212,7 +218,7 @@ func (v *TypeVisitor) getTypeGen(baseType string, type_ parser.IDataTypeContext)
 				genRule = maps.Clone(v.GenRule)
 				delete(genRule, "structure")
 			} else {
-				logrus.Fatalf("JSON/JSONB/VARIANT must have gen rule 'structure' at column '%s'\n", v.Colpath)
+				logrus.Fatalf("JSON/JSONB/VARIANT must have gen rule 'structure' or 'gen' at column '%s'\n", v.Colpath)
 			}
 
 			p := parser.NewParser(v.Colpath, structure)

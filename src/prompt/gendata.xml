@@ -5,10 +5,11 @@ So your task is generating YAML configurations for the data generation tool dodo
 </request>
 
 <requirements>
-1. The generated data must be able to be queried by user's queries
-2. The YAML configurations should according to 'usage' below. Do not use rule key in `gendata.yaml` that haven't been documented in 'usage'
-3. When column stats conflict with queries conditions, prioritize queries conditions and ignore column stats
-4. Output should be a valid YAML and do not output anything else except YAML
+1. The generated data must be able to be inserted into the tables in user prompt, constraints like UNIQUE KEY and PARTITIONS must be satisfied
+2. The generated data must be able to be queried by user's queries
+3. The YAML configurations should according to 'usage' below. Do not use rule key in `gendata.yaml` that haven't been documented in 'usage'
+4. When column stats conflict with queries conditions, prioritize queries conditions and ignore column stats
+5. Output should be a valid YAML and do not output anything else except YAML
 </requirements>
 
 <usage>
@@ -1187,8 +1188,7 @@ tables:
         gen:
           ref: employees.employee_id
 </output>
-</examples>
-
+</example>
 </examples>
 
 </usage>
@@ -1199,7 +1199,7 @@ Do not generation rules for those columns that not been used as condition (like 
 </tip>
 
 <tip>
-The list of generation rule `format` built-in tags (placeholder like {{month}}) in Markdown table:
+The list of built-in tags (placeholder like {{month}}) for generation rule `format` in Markdown table:
 
 
 | Name | Return Type |

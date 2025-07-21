@@ -201,6 +201,26 @@ func getStmtfromShowCreate(r *sqlx.Rows) (schema string, err error) {
 	return
 }
 
+func ShowCatalogs(ctx context.Context, conn *sqlx.DB, namePrefix string) ([]string, error) {
+	r, err := conn.QueryxContext(ctx, InternalSqlComment+`SHOW CATALOGS LIKE ?`, SanitizeLike(namePrefix)+"%")
+	if err != nil {
+		return nil, err
+	}
+	defer r.Close()
+
+	catalogs := []string{}
+	for r.Next() {
+		catalog := map[string]any{}
+		if err := r.MapScan(catalog); err != nil {
+			return nil, err
+		}
+		// cobra.CompDebug(fmt.Sprintln("asdadad", catalog), true)
+		catalogs = append(catalogs, cast.ToString(catalog["CatalogName"]))
+	}
+
+	return catalogs, r.Err()
+}
+
 func ShowDatabases(ctx context.Context, conn *sqlx.DB, dbnamePrefix string) ([]string, error) {
 	dbs := []string{}
 	err := conn.SelectContext(ctx, &dbs, InternalSqlComment+`SELECT SCHEMA_NAME FROM information_schema.schemata WHERE SCHEMA_NAME not in ('__internal_schema', 'information_schema', 'mysql') AND SCHEMA_NAME like ? ORDER BY SCHEMA_NAME`, SanitizeLike(dbnamePrefix)+"%")
@@ -272,6 +292,58 @@ func ShowFronendsDisksDir(ctx context.Context, conn *sqlx.DB, diskType string) (
 	}
 
 	return dir, r.Err()
+}
+
+func exportTable(ctx context.Context, conn *sqlx.DB, dbname, table, target, toURL string, with, props map[string]string) error {
+	strKV := func(k string, v string) string {
+		if !strings.HasPrefix(k, `"`) && !strings.HasSuffix(k, `'`) {
+			k = string(MustJsonMarshal(strings.TrimSpace(k)))
+		}
+		if !strings.HasPrefix(v, `"`) && !strings.HasSuffix(v, `'`) {
+			v = string(MustJsonMarshal(strings.TrimSpace(v)))
+		}
+		return fmt.Sprintf("  %s = %s", k, v)
+	}
+
+	stmt := fmt.Sprintf("EXPORT TABLE `%s`.`%s` TO '%s'\nPROPERTIES (\n%s\n)\nWITH %s (\n%s\n);",
+		dbname, table, toURL,
+		strings.Join(lo.MapToSlice(props, strKV), ",\n"),
+		strings.ToUpper(target),
+		strings.Join(lo.MapToSlice(with, strKV), ",\n"),
+	)
+
+	_, err := conn.ExecContext(ctx, InternalSqlComment+stmt)
+	return err
+}
+
+func showExportTable(ctx context.Context, conn *sqlx.DB, dbname string, label string) (completed bool, progress string, err error) {
+	r, err := conn.QueryxContext(ctx, InternalSqlComment+fmt.Sprintf("SHOW EXPORT FROM `%s` WHERE Label = '%s' ORDER BY CreateTime desc LIMIT 1", dbname, label))
+	if err != nil {
+		return false, "", err
+	}
+	defer r.Close()
+	if !r.Next() {
+		return false, "", fmt.Errorf("no rows returned from SHOW EXPORT, db: %s, label: %s", dbname, label)
+	}
+
+	vals := map[string]any{}
+	if err := r.MapScan(vals); err != nil {
+		return false, "", err
+	}
+
+	// https://doris.apache.org/docs/sql-manual/sql-statements/data-modification/load-and-export/SHOW-EXPORT#return-value
+	state := cast.ToString(vals["State"])
+	progress = cast.ToString(vals["Progress"])
+	errMsg := cast.ToString(vals["ErrorMsg"])
+	if state == "CANCELLED" || errMsg != "" {
+		return false, "", fmt.Errorf("export failed: %s", errMsg)
+	}
+	return state == "FINISHED", progress, nil
+}
+
+func cancelExportTable(ctx context.Context, conn *sqlx.DB, dbname string, label string) error {
+	_, err := conn.ExecContext(ctx, InternalSqlComment+fmt.Sprintf("CANCEL EXPORT FROM `%s` WHERE Label = '%s'", dbname, label))
+	return err
 }
 
 //nolint:revive

@@ -2,6 +2,7 @@ package generator
 
 import (
 	"fmt"
+	"io"
 	"math/rand/v2"
 	"time"
 	"unsafe"
@@ -13,6 +14,28 @@ import (
 	"github.com/spf13/cast"
 	"gopkg.in/yaml.v3"
 )
+
+type ColValWriter interface {
+	io.Writer
+	io.StringWriter
+}
+
+func WriteColVal(w ColValWriter, val any) (int, error) {
+	if val == nil {
+		return w.WriteString(`\N`)
+	}
+
+	switch v := val.(type) {
+	case string:
+		return w.WriteString(v)
+	case json.RawMessage:
+		return w.Write(v)
+	case []byte:
+		return w.Write(v)
+	default:
+		return fmt.Fprint(w, val)
+	}
+}
 
 //nolint:revive
 func MergeGenRules(dst, src GenRule, overwrite bool) {

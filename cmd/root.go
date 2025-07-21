@@ -16,21 +16,29 @@ limitations under the License.
 package cmd
 
 import (
+	"errors"
 	"fmt"
 	"os"
 	"reflect"
 	"runtime"
 	"strings"
+	"sync/atomic"
 
+	"github.com/jmoiron/sqlx"
+	"github.com/samber/lo"
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 	"github.com/spf13/pflag"
 	"github.com/spf13/viper"
+
+	"github.com/Thearas/dodo/src"
 )
 
 var (
 	GlobalConfig    = Global{}
 	DefaultParallel = 10
+
+	completionDB *sqlx.DB
 )
 
 type Global struct {
@@ -88,10 +96,7 @@ func init() {
 	rootCmd.PersistentFlags().SortFlags = false
 	rootCmd.Flags().SortFlags = false
 
-	parallel := runtime.NumCPU()
-	if parallel > DefaultParallel {
-		parallel = DefaultParallel
-	}
+	parallel := min(runtime.NumCPU(), DefaultParallel)
 
 	pFlags := rootCmd.PersistentFlags()
 	pFlags.StringVarP(&GlobalConfig.ConfigFile, "config", "C", "", "Config file (default is $HOME/.dodo.yaml)")
@@ -109,10 +114,77 @@ func init() {
 	pFlags.StringVar(&GlobalConfig.Catalog, "catalog", "", "Catalog to work on")
 	pFlags.StringSliceVarP(&GlobalConfig.DBs, "dbs", "D", []string{}, "DBs to work on")
 	pFlags.StringSliceVarP(&GlobalConfig.Tables, "tables", "T", []string{}, "Tables to work on")
+
+	compInit := func(cmd *cobra.Command) error {
+		if err := initConfig(cmd); err != nil {
+			return err
+		}
+		db := setupCompletionDB()
+		if db == nil {
+			return errors.New("failed to connect to database for completion")
+		}
+		return nil
+	}
+	compopts := cobra.ShellCompDirectiveNoFileComp | cobra.ShellCompDirectiveDefault | cobra.ShellCompDirectiveKeepOrder
+
+	rootCmd.RegisterFlagCompletionFunc("catalog", func(cmd *cobra.Command, _ []string, tocomplete string) ([]string, cobra.ShellCompDirective) {
+		if err := compInit(cmd); err != nil {
+			return nil, cobra.ShellCompDirectiveError
+		}
+		items, err := src.ShowCatalogs(cmd.Context(), completionDB, tocomplete)
+		if len(items) == 0 || err != nil {
+			return []string{"No catalog found"}, cobra.ShellCompDirectiveError
+		}
+		return items, compopts
+	})
+
+	rootCmd.RegisterFlagCompletionFunc("dbs", func(cmd *cobra.Command, _ []string, tocomplete string) ([]string, cobra.ShellCompDirective) {
+		if err := compInit(cmd); err != nil {
+			return nil, cobra.ShellCompDirectiveError
+		}
+		items, err := src.ShowDatabases(cmd.Context(), completionDB, tocomplete)
+		if len(items) == 0 || err != nil {
+			return []string{"No database found"}, cobra.ShellCompDirectiveError
+		}
+		return items, compopts
+	})
+
+	rootCmd.RegisterFlagCompletionFunc("tables", func(cmd *cobra.Command, _ []string, tocomplete string) ([]string, cobra.ShellCompDirective) {
+		if err := compInit(cmd); err != nil {
+			return nil, cobra.ShellCompDirectiveError
+		}
+
+		var dbname string
+		dbtable := strings.SplitN(tocomplete, ".", 2)
+		if len(dbtable) == 2 {
+			dbname = dbtable[0]
+			tocomplete = dbtable[1]
+		} else if len(GlobalConfig.DBs) == 0 {
+			dbCompF, _ := rootCmd.GetFlagCompletionFunc("dbs")
+			items, compopts := dbCompF(cmd, nil, tocomplete)
+			return lo.Map(items, func(item string, _ int) string { return item + "." }), compopts
+		} else if len(GlobalConfig.DBs) == 1 {
+			dbname = GlobalConfig.DBs[0]
+		} else {
+			return lo.Map(GlobalConfig.DBs, func(db string, _ int) string { return db + "." }), compopts
+		}
+
+		items, err := src.ShowTables(cmd.Context(), completionDB, dbname, tocomplete)
+		if len(items) == 0 || err != nil {
+			return []string{"No table found"}, cobra.ShellCompDirectiveError
+		}
+		return lo.Map(items, func(item *src.Schema, _ int) string { return dbname + "." + item.Name }), compopts
+	})
 }
+
+var isCfgInited atomic.Bool
 
 // initConfig reads in config file and ENV variables if set.
 func initConfig(cmd *cobra.Command, prefixs ...string) error {
+	if isCfgInited.Swap(true) {
+		return nil
+	}
+
 	cfgFile := GlobalConfig.ConfigFile
 	if cfgFile != "" {
 		// Use config file from the flag.
@@ -194,4 +266,43 @@ func initLog() error {
 	logrus.SetOutput(os.Stderr)
 	logrus.SetFormatter(&logrus.TextFormatter{})
 	return nil
+}
+
+func completeDBTables(dbtableNotFoundErr ...string) error {
+	GlobalConfig.DBs, GlobalConfig.Tables = lo.Uniq(GlobalConfig.DBs), lo.Uniq(GlobalConfig.Tables)
+	dbs, tables := GlobalConfig.DBs, GlobalConfig.Tables
+	if len(dbs) == 0 && len(tables) == 0 {
+		if len(dbtableNotFoundErr) > 0 {
+			return errors.New(dbtableNotFoundErr[0])
+		}
+		return errors.New("expected at least one database or tables, please use --dbs/--tables flag or --ddl flag with '.sql' file(s)")
+	} else if len(dbs) == 1 {
+		// prepend default database if only one database specified
+		prefix := dbs[0] + "."
+		for i, t := range GlobalConfig.Tables {
+			if !strings.Contains(t, ".") {
+				GlobalConfig.Tables[i] = prefix + t
+			}
+		}
+	} else {
+		for _, t := range tables {
+			if !strings.Contains(t, ".") {
+				return errors.New("expected database in table name when zero/multiple databases specified, e.g. --tables db1.table1,db2.table2")
+			}
+		}
+	}
+	return nil
+}
+
+func setupCompletionDB() *sqlx.DB {
+	if completionDB != nil {
+		return completionDB
+	}
+
+	db, err := connectDBWithoutDBName()
+	if err != nil {
+		return nil
+	}
+	completionDB = db
+	return db
 }

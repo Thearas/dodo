@@ -103,6 +103,10 @@ dodo diff --min-duration-diff 200ms --original-sqls 'output/sql/*.sql' output/re
 
 # diff of two replay result directories
 dodo diff replay1/ replay2/
+
+
+# Export table data
+dodo export --help
 ```
 
 ### Config

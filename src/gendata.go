@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/goccy/go-json"
 	"github.com/samber/lo"
 	"github.com/sirupsen/logrus"
 
@@ -69,10 +68,12 @@ func NewTableGen(ddlfile, createTableStmt string, stats *TableStats, rows int, s
 	streamLoadCols := make([]string, 0, colCount) // construct for streamload header `curl -H 'columns: xxx'`
 	hasStreamLoadColMapping := false
 	for i, col := range c.ColumnDefs().GetCols() {
-		colName := strings.Trim(col.GetColName().GetText(), "`")
-		colType_ := col.GetType_()
-		visitor := gen.NewTypeVisitor(fmt.Sprintf("%s.%s", table, colName), nil)
-		colBaseType := visitor.GetBaseType(colType_)
+		var (
+			colName     = strings.Trim(col.GetColName().GetText(), "`")
+			colType_    = col.GetType_()
+			visitor     = gen.NewTypeVisitor(fmt.Sprintf("%s.%s", table, colName), nil)
+			colBaseType = visitor.GetBaseType(colType_)
+		)
 
 		// get column gen rule
 		visitor.GenRule = newColGenRule(col, colName, colBaseType, colStats, customColumnRule)
@@ -84,25 +85,10 @@ func NewTableGen(ddlfile, createTableStmt string, stats *TableStats, rows int, s
 		tg.Columns = append(tg.Columns, colName)
 
 		// column mapping in streamload header
-		var loadMapping string
-		loadCol := colName
-		if len(streamloadColNames) > 0 {
-			loadCol = streamloadColNames[i]
-		}
-		switch colBaseType {
-		case "BITMAP":
-			hasStreamLoadColMapping = true
-			loadMapping = fmt.Sprintf("raw_%s,`%s`=bitmap_from_array(cast(raw_%s as ARRAY<BIGINT(20)>))", loadCol, loadCol, loadCol)
-		case "HLL":
-			hasStreamLoadColMapping = true
-			loadMapping = fmt.Sprintf("raw_%s,`%s`=hll_empty()", loadCol, loadCol)
-			if from := visitor.GetRule("from"); from != nil {
-				loadMapping = fmt.Sprintf("raw_%s,`%s`=hll_hash(%v)", loadCol, loadCol, from)
-			}
-		default:
-			loadMapping = "`" + loadCol + "`"
-		}
-		streamLoadCols = append(streamLoadCols, loadMapping)
+		loadCol := lo.NthOr(streamloadColNames, i, colName)
+		mapping, needMapping := buildStreamLoadMapping(visitor, loadCol, colBaseType)
+		streamLoadCols = append(streamLoadCols, mapping)
+		hasStreamLoadColMapping = hasStreamLoadColMapping || needMapping
 	}
 
 	if hasStreamLoadColMapping {
@@ -112,7 +98,12 @@ func NewTableGen(ddlfile, createTableStmt string, stats *TableStats, rows int, s
 	return tg, nil
 }
 
-func newColGenRule(col parser.IColumnDefContext, colName, colType string, colStats map[string]*ColumnStats, customColumnRule map[string]GenRule) GenRule {
+func newColGenRule(
+	col parser.IColumnDefContext,
+	colName, colBaseType string,
+	colStats map[string]*ColumnStats,
+	customColumnRule map[string]GenRule,
+) GenRule {
 	genRule := GenRule{}
 
 	// 1. Merge rules in stats
@@ -125,15 +116,21 @@ func newColGenRule(col parser.IColumnDefContext, colName, colType string, colSta
 			genRule["null_frequency"] = nullFreq
 		}
 
-		if IsStringType(colType) {
+		if IsStringType(colBaseType) {
 			avgLen := colstats.AvgSizeByte
 			genRule["length"] = avgLen
 
-			// HACK: +-5 on string avg size as length
-			if avgLen > 5 && colType != "CHAR" {
+			// HACK: +-5/10 on string avg size as length
+			if colBaseType != "CHAR" && len(colstats.Min) != len(colstats.Max) {
+				var extent int64
+				if avgLen > 10 {
+					extent = 10
+				} else if avgLen > 5 {
+					extent = 5
+				}
 				genRule["length"] = GenRule{
-					"min": avgLen - 5,
-					"max": avgLen + 5,
+					"min": avgLen - extent,
+					"max": avgLen + extent,
 				}
 			}
 		} else {
@@ -159,6 +156,27 @@ func newColGenRule(col parser.IColumnDefContext, colName, colType string, colSta
 	}
 
 	return genRule
+}
+
+func buildStreamLoadMapping(visitor *gen.TypeVisitor, loadColName, colBaseType string) (string, bool) {
+	var (
+		mapping     string
+		needMapping bool
+	)
+	switch colBaseType {
+	case "BITMAP":
+		needMapping = true
+		mapping = fmt.Sprintf("raw_%s,`%s`=bitmap_from_array(cast(raw_%s as ARRAY<BIGINT(20)>))", loadColName, loadColName, loadColName)
+	case "HLL":
+		needMapping = true
+		mapping = fmt.Sprintf("raw_%s,`%s`=hll_empty()", loadColName, loadColName)
+		if from := visitor.GetRule("from"); from != nil {
+			mapping = fmt.Sprintf("raw_%s,`%s`=hll_hash(%v)", loadColName, loadColName, from)
+		}
+	default:
+		mapping = "`" + loadColName + "`"
+	}
+	return mapping, needMapping
 }
 
 type TableGen struct {
@@ -215,15 +233,7 @@ func (tg *TableGen) genOne(w *bufio.Writer, colIdxRefGens map[int]*gen.RefGen) {
 			}
 		}
 
-		if val == nil {
-			w.WriteString(`\N`)
-		} else if v, ok := val.(json.RawMessage); ok {
-			w.Write(v)
-		} else if s, ok := val.(string); ok {
-			w.WriteString(s)
-		} else {
-			fmt.Fprint(w, val)
-		}
+		gen.WriteColVal(w, val)
 		if i != len(tg.colGens)-1 {
 			w.WriteRune(ColumnSeparator)
 		}
