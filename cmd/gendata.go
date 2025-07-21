@@ -268,6 +268,10 @@ func init() {
 	pFlags.StringVarP(&GendataConfig.Query, "query", "q", "", "SQL query file to generate data, only can be used when LLM is on")
 	pFlags.StringVarP(&GendataConfig.Prompt, "prompt", "p", "", "Additional user prompt for LLM")
 	addAnonymizeBaseFlags(pFlags, false)
+
+	gendataCmd.RegisterFlagCompletionFunc("llm", func(_ *cobra.Command, _ []string, _ string) ([]string, cobra.ShellCompDirective) {
+		return []string{"deepseek-reasoner", "deepseek-chat"}, cobra.ShellCompDirectiveNoFileComp | cobra.ShellCompDirectiveDefault
+	})
 }
 
 // completeGendataConfig validates and completes the gendata configuration

@@ -28,6 +28,7 @@
   - [Replay Speed and Concurrency](#replay-speed-and-concurrency)
   - [Other Replay Parameters](#other-replay-parameters)
 - [Diff Replay Results](#diff-replay-results)
+- [Export table data](#Export table data)
 - [Best Practices](#best-practices)
   - [Command-line Prompts and Autocompletion](#command-line-prompts-and-autocompletion)
   - [Environment Variables and Configuration Files](#environment-variables-and-configuration-files)
@@ -636,6 +637,17 @@ There are two ways:
     ```
 
 > `--min-duration-diff` means print SQLs whose execution duration difference exceeds this value. Default is `100ms`.
+
+## Export table data
+
+`dodo export --help`
+
+Encapsulates the [Export](https://doris.apache.org/docs/sql-manual/sql-statements/data-modification/load-and-export/EXPORT) SQL statement, exporting table data to `s3`, `hdfs` or `local` storage. The command will wait for the export to complete and return, and the export will be canceled if the command is terminated.
+
+```sh
+# The placeholders `{db}` and `{table}` can be used in the export target `--url`, representing the database name and table name respectively
+dodo export --dbs db1 --tables t1,t2 --target s3 --url 's3://bucket/export/{db}/{table}_' -p timeout=60 -w s3.endpoint=xxx -w s3.access_key=xxx -w s3.secret_key=xxx
+```
 
 ## Best Practices
 

@@ -162,6 +162,10 @@ func init() {
 	pFlags.StringVar(&DumpConfig.SSHPrivateKey, "ssh-private-key", "~/.ssh/id_rsa", "File path of SSH private key for '--ssh-address'")
 	addAnonymizeBaseFlags(pFlags, false)
 
+	dumpCmd.RegisterFlagCompletionFunc("query-states", func(_ *cobra.Command, _ []string, _ string) ([]string, cobra.ShellCompDirective) {
+		return []string{"ok", "eof", "err"}, cobra.ShellCompDirectiveNoFileComp | cobra.ShellCompDirectiveDefault
+	})
+
 	flags := dumpCmd.Flags()
 	flags.BoolVar(&DumpConfig.Clean, "clean", false, "Clean previous data and output directory")
 }

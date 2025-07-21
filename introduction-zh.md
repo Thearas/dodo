@@ -28,6 +28,7 @@
   - [回放速度和并发](#回放速度和并发)
   - [其他回放参数](#其他回放参数)
 - [对比回放结果](#对比回放结果)
+- [导出表数据](#导出表数据)
 - [最佳实践](#最佳实践)
   - [命令行提示与自动补全](#命令行提示与自动补全)
   - [环境变量和配置文件](#环境变量和配置文件)
@@ -633,6 +634,17 @@ dodo replay -f output/q0.sql
     ```
 
 > `--min-duration-diff` 表示打印执行时长差异超过此值的 SQL，默认 `100ms`
+
+## 导出表数据
+
+`dodo export --help`
+
+对 [Export](https://doris.apache.org/docs/sql-manual/sql-statements/data-modification/load-and-export/EXPORT) 语句的封装，导出表数据到 `s3`、`hdfs` 或 `local` 存储。命令会等待导出跑完后返回，中途终止会取消导出。
+
+```sh
+# 导出目标 `--url` 中可使用占位符 `{db}` 和 `{table}`，分别代表数据库名和表名
+dodo export --dbs db1 --tables t1,t2 --target s3 --url 's3://bucket/export/{db}/{table}_' -p timeout=60 -w s3.endpoint=xxx -w s3.access_key=xxx -w s3.secret_key=xxx
+```
 
 ## 最佳实践
 
