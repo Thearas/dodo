@@ -16,11 +16,10 @@ limitations under the License.
 package cmd
 
 import (
-	"errors"
 	"fmt"
+	"os"
 	"path/filepath"
 	"slices"
-	"strings"
 
 	"github.com/emirpasic/gods/queues/circularbuffer"
 	"github.com/samber/lo"
@@ -151,30 +150,13 @@ func completeCreateConfig() (err error) {
 			}
 		}
 		createTableDDLs = tableDDLs
-
-		return err
+		return nil
 	}
 
 	ddldir := filepath.Join(GlobalConfig.OutputDir, "ddl")
 
-	GlobalConfig.DBs, GlobalConfig.Tables = lo.Uniq(GlobalConfig.DBs), lo.Uniq(GlobalConfig.Tables)
-	dbs, tables := GlobalConfig.DBs, GlobalConfig.Tables
-	if len(dbs) == 0 && len(tables) == 0 {
-		return errors.New("expected at least one database or tables, please use --dbs/--tables flag or --ddl flag")
-	} else if len(dbs) == 1 {
-		// prepend default database if only one database specified
-		prefix := dbs[0] + "."
-		for i, t := range GlobalConfig.Tables {
-			if !strings.Contains(t, ".") {
-				GlobalConfig.Tables[i] = prefix + t
-			}
-		}
-	} else {
-		for _, t := range tables {
-			if !strings.Contains(t, ".") {
-				return errors.New("expected database in table name when zero/multiple databases specified, e.g. --tables db1.table1,db2.table2")
-			}
-		}
+	if err := completeDBTables(); err != nil {
+		return err
 	}
 
 	if len(GlobalConfig.Tables) == 0 {
@@ -198,6 +180,14 @@ func completeCreateConfig() (err error) {
 	} else {
 		for _, table := range GlobalConfig.Tables {
 			tableddl := filepath.Join(ddldir, fmt.Sprintf("%s.table.sql", table))
+			if _, err := os.Stat(tableddl); err != nil {
+				// maybe a view
+				fmatch := filepath.Join(ddldir, fmt.Sprintf("%s.*view.sql", table))
+				if viewddls, err := src.FileGlob([]string{fmatch}); err == nil && len(viewddls) > 0 {
+					createOtherDDLs = append(createOtherDDLs, viewddls...)
+				}
+				continue
+			}
 			createTableDDLs = append(createTableDDLs, tableddl)
 		}
 	}

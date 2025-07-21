@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/goccy/go-json"
 	"github.com/samber/lo"
 	"github.com/sirupsen/logrus"
 
@@ -129,11 +128,17 @@ func newColGenRule(col parser.IColumnDefContext, colName, colType string, colSta
 			avgLen := colstats.AvgSizeByte
 			genRule["length"] = avgLen
 
-			// HACK: +-5 on string avg size as length
-			if avgLen > 5 && colType != "CHAR" {
+			// HACK: +-5/10 on string avg size as length
+			if colType != "CHAR" && len(colstats.Min) != len(colstats.Max) {
+				var extent int64
+				if avgLen > 10 {
+					extent = 10
+				} else if avgLen > 5 {
+					extent = 5
+				}
 				genRule["length"] = GenRule{
-					"min": avgLen - 5,
-					"max": avgLen + 5,
+					"min": avgLen - extent,
+					"max": avgLen + extent,
 				}
 			}
 		} else {
@@ -215,15 +220,7 @@ func (tg *TableGen) genOne(w *bufio.Writer, colIdxRefGens map[int]*gen.RefGen) {
 			}
 		}
 
-		if val == nil {
-			w.WriteString(`\N`)
-		} else if v, ok := val.(json.RawMessage); ok {
-			w.Write(v)
-		} else if s, ok := val.(string); ok {
-			w.WriteString(s)
-		} else {
-			fmt.Fprint(w, val)
-		}
+		gen.WriteColVal(w, val)
 		if i != len(tg.colGens)-1 {
 			w.WriteRune(ColumnSeparator)
 		}

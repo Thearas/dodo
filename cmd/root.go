@@ -16,12 +16,14 @@ limitations under the License.
 package cmd
 
 import (
+	"errors"
 	"fmt"
 	"os"
 	"reflect"
 	"runtime"
 	"strings"
 
+	"github.com/samber/lo"
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 	"github.com/spf13/pflag"
@@ -193,5 +195,31 @@ func initLog() error {
 	logrus.SetLevel(logLevel)
 	logrus.SetOutput(os.Stderr)
 	logrus.SetFormatter(&logrus.TextFormatter{})
+	return nil
+}
+
+func completeDBTables(dbtableNotFoundErr ...string) error {
+	GlobalConfig.DBs, GlobalConfig.Tables = lo.Uniq(GlobalConfig.DBs), lo.Uniq(GlobalConfig.Tables)
+	dbs, tables := GlobalConfig.DBs, GlobalConfig.Tables
+	if len(dbs) == 0 && len(tables) == 0 {
+		if len(dbtableNotFoundErr) > 0 {
+			return errors.New(dbtableNotFoundErr[0])
+		}
+		return errors.New("expected at least one database or tables, please use --dbs/--tables flag or --ddl flag with '.sql' file(s)")
+	} else if len(dbs) == 1 {
+		// prepend default database if only one database specified
+		prefix := dbs[0] + "."
+		for i, t := range GlobalConfig.Tables {
+			if !strings.Contains(t, ".") {
+				GlobalConfig.Tables[i] = prefix + t
+			}
+		}
+	} else {
+		for _, t := range tables {
+			if !strings.Contains(t, ".") {
+				return errors.New("expected database in table name when zero/multiple databases specified, e.g. --tables db1.table1,db2.table2")
+			}
+		}
+	}
 	return nil
 }

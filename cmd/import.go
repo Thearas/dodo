@@ -105,24 +105,8 @@ func completeImportConfig() (err error) {
 		ImportConfig.Data = filepath.Join(GlobalConfig.OutputDir, "gendata")
 	}
 
-	GlobalConfig.DBs, GlobalConfig.Tables = lo.Uniq(GlobalConfig.DBs), lo.Uniq(GlobalConfig.Tables)
-	dbs, tables := GlobalConfig.DBs, GlobalConfig.Tables
-	if len(dbs) == 0 && len(tables) == 0 {
-		return errors.New("expected at least one database or tables, please use --dbs/--tables flag")
-	} else if len(dbs) == 1 {
-		// prepend default database if only one database specified
-		prefix := dbs[0] + "."
-		for i, t := range GlobalConfig.Tables {
-			if !strings.Contains(t, ".") {
-				GlobalConfig.Tables[i] = prefix + t
-			}
-		}
-	} else {
-		for _, t := range tables {
-			if !strings.Contains(t, ".") {
-				return errors.New("expected database in table name when zero/multiple databases specified, e.g. --tables db1.table1,db2.table2")
-			}
-		}
+	if err := completeDBTables("expected at least one database or tables, please use --dbs/--tables flag"); err != nil {
+		return err
 	}
 
 	table2datafiles := map[string][]string{}

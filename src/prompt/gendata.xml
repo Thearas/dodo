@@ -1199,7 +1199,7 @@ Do not generation rules for those columns that not been used as condition (like 
 </tip>
 
 <tip>
-The list of generation rule `format` built-in tags (placeholder like {{month}}) in Markdown table:
+The list of built-in tags (placeholder like {{month}}) for generation rule `format` in Markdown table:
 
 
 | Name | Return Type |

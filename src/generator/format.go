@@ -58,12 +58,7 @@ func (g *FormatGen) Gen() any {
 		}
 
 		result := tagF.Call(nil)[0].Interface()
-		if result == nil {
-			return w.Write([]byte(`\N`))
-		} else if s, ok := result.(string); ok {
-			return w.Write([]byte(s))
-		}
-		return w.Write(fmt.Append(nil, result))
+		return WriteColVal(w.(ColValWriter), result)
 	})
 	if err != nil {
 		logrus.Errorf("format execute templace failed, err: %v\n", err)
