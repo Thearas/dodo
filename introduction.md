@@ -646,7 +646,7 @@ Encapsulates the [Export](https://doris.apache.org/docs/sql-manual/sql-statement
 
 > [!NOTE]
 >
-> - The command will wait for the export to complete and return, and the export will be canceled if the command is terminated.
+> - The command will wait for the export to complete, and the export will be canceled if the command is terminated.
 > - The column separator is `☆` by default in CSV format. You can specify them with `-p column_separator=xxx`
 
 ```sh

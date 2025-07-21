@@ -641,8 +641,10 @@ dodo replay -f output/q0.sql
 
 对 [Export](https://doris.apache.org/docs/sql-manual/sql-statements/data-modification/load-and-export/EXPORT) 语句的封装，导出表数据到 `s3`、`hdfs` 或 `local` 存储。
 
-- 命令会等待导出跑完后返回，中途终止会取消导出
-- CSV 格式下默认的列分隔符是 `☆`，可通过 `-p column_separator=xxx` 指定
+> [!NOTE]
+>
+> - 命令会等待导出跑完后返回，中途终止会取消导出
+> - CSV 格式下默认的列分隔符是 `☆`，可通过 `-p column_separator=xxx` 指定
 
 ```sh
 # 导出目标 `--url` 中可使用占位符 `{db}` 和 `{table}`，分别代表数据库名和表名
