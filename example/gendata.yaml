@@ -80,7 +80,7 @@ tables:
           inc: 2
           start: 100
 
-      # enum generator, enum value can be any literal or a generation rule
+      # enum generator, enum value can be any literal or a generator
       - name: t_null_string
         null_frequency: 0.5
         format: "What's your name? My name is {{%s}}."
@@ -90,7 +90,7 @@ tables:
           weights: [0.2, 0.6, 0.2] # optional, the probabilities of being chosen
       - name: t_bigint
         gen:
-          # randomly choose one generation rule to generate value, each has 25% probability
+          # randomly choose one generator to generate value, each has 25% probability
           enum:
             - {min: 0, max: 5}
             - {min: 5, max: 10}
@@ -98,7 +98,7 @@ tables:
             - gen:
                 enum: [1, 2, 3]
 
-      # parts generator, part value can be any literal or a generation rule, parts must combine with format
+      # parts generator, part value can be any literal or a generator, parts must combine with format
       - name: date1
         format: "{{year}}-{{%02d}}-{{%02d}}"
         gen:

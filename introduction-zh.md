@@ -784,14 +784,13 @@ rg -e '"durationMs":[6-9]\d{3}' -e '"durationMs":\d{5}' output/replay
     user: root
     dbs: [example]
 
-    llm: deepseek-chat    # or o3-mini, etc.
-    llm-api-key: sk-xxxx  # Your LLM API key
+    llm: deepseek-chat      # or o3-mini, etc.
+    llm-api-key: sk-xxxx    # LLM API key
+    anonymize: true         # anonymize SQL before sending to LLM
     EOF
     ```
 
-3. 在命令行跑 `gemini -s`，并在 `gemini` 对话框中输入 `dodo --config: @dodo.yaml, prompt: @example/usercase/prompt.txt`，回车
-
-然后看着它自主运行，我们偶尔批准下它的执行计划即可。
+3. 在命令行跑 `gemini -iyp 'Your task: @example/usercase/prompt.txt, do not ask any questions, just proceed'`
 
 ---
 

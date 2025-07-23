@@ -144,6 +144,7 @@ Example:
 			}
 			GendataConfig.GenConf = genconfPath
 		}
+
 		// 2. Setup generator
 		if err := generator.Setup(GendataConfig.GenConf); err != nil {
 			return err
@@ -333,8 +334,8 @@ func findTableStats(ddlFileName string) (*src.TableStats, error) {
 	ddlFileDir := filepath.Dir(ddlFileName)
 	ddlFileName = filepath.Base(ddlFileName)
 
-	db, table := dbtableFromFileName(ddlFileName)
-	isDumpTable := db != ""
+	db, table, isTable := dbtableFromFileName(ddlFileName)
+	isDumpTable := db != "" && isTable
 	if !isDumpTable {
 		return nil, nil
 	}
@@ -397,15 +398,4 @@ func createOutputGenDataWriter(ddlFileName string, idx int) (*os.File, error) {
 		logrus.Fatalln("Can not open output data file:", file, ", err:", err)
 	}
 	return f, nil
-}
-
-// table ddl file has 4 parts: {db}.{table}.table.sql
-func dbtableFromFileName(file string) (string, string) {
-	parts := strings.Split(filepath.Base(file), ".")
-	isDumpTable := len(parts) == 4 && strings.HasSuffix(file, ".table.sql")
-	if !isDumpTable {
-		return "", ""
-	}
-
-	return parts[0], parts[1]
 }

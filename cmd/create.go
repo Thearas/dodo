@@ -20,6 +20,7 @@ import (
 	"os"
 	"path/filepath"
 	"slices"
+	"strings"
 
 	"github.com/emirpasic/gods/queues/circularbuffer"
 	"github.com/samber/lo"
@@ -73,11 +74,11 @@ Example:
 		g := src.ParallelGroup(GlobalConfig.Parallel)
 		for _, t := range createTableDDLs {
 			g.Go(func() error {
-				dbname, _ := dbtableFromFileName(t)
+				dbname, _, _ := dbtableFromFileName(t)
 				if createConnDB != "" {
 					dbname = createConnDB
 				}
-				logrus.Debugf("create ddl file %s in db %s", t, dbname)
+				logrus.Debugf("create ddl file %s in db '%s'", t, dbname)
 				if _, err := src.RunCreateSQL(ctx, db, dbname, t, beCount, GlobalConfig.DryRun); err != nil {
 					return err
 				}
@@ -99,7 +100,7 @@ Example:
 			v, count := v_.(lo.Tuple2[string, int]).Unpack()
 
 			logrus.Debugln("create ddl file", v, ", round:", count)
-			dbname, _ := dbtableFromFileName(v)
+			dbname, _, _ := dbtableFromFileName(v)
 			if createConnDB != "" {
 				dbname = createConnDB
 			}
@@ -134,16 +135,25 @@ func init() {
 
 // completeCreateConfig validates and completes the create configuration
 func completeCreateConfig() (err error) {
-	if len(createTableDDLs) > 0 {
+	ddldir := filepath.Join(GlobalConfig.OutputDir, "ddl")
+	isDDLDir := false
+	if len(createTableDDLs) == 1 {
+		s, err := os.Stat(createTableDDLs[0]) // check if it is a directory
+		if err == nil && s.IsDir() {
+			ddldir = createTableDDLs[0]
+			isDDLDir = true
+		}
+	}
+	if len(createTableDDLs) > 0 && !isDDLDir {
 		createDDLs_, err := src.FileGlob(createTableDDLs)
 		if err != nil {
 			return err
 		}
 		var tableDDLs []string
 		for _, ddl := range createDDLs_ {
-			db, _ := dbtableFromFileName(ddl)
+			db, _, isTable := dbtableFromFileName(ddl)
 			isDumpTable := db != ""
-			if isDumpTable {
+			if isDumpTable && isTable {
 				tableDDLs = append(tableDDLs, ddl)
 			} else {
 				createOtherDDLs = append(createOtherDDLs, ddl)
@@ -153,12 +163,12 @@ func completeCreateConfig() (err error) {
 		return nil
 	}
 
-	ddldir := filepath.Join(GlobalConfig.OutputDir, "ddl")
-
 	if err := completeDBTables(); err != nil {
 		return err
 	}
 
+	// auto find ddl
+	createTableDDLs = []string{}
 	if len(GlobalConfig.Tables) == 0 {
 		for _, db := range GlobalConfig.DBs {
 			fmatch := filepath.Join(ddldir, fmt.Sprintf("%s.*.table.sql", db))
@@ -196,4 +206,17 @@ func completeCreateConfig() (err error) {
 	slices.Sort(createOtherDDLs)
 
 	return nil
+}
+
+func dbtableFromFileName(file string) (string, string, bool) {
+	// table ddl file has 4 parts: {db}.{table}.{table|view|materialized_view|...}.sql
+	dumpsuffixs := lo.Map(src.AllSchemaTypes, func(t src.SchemaType, _ int) string { return t.Lower() })
+
+	parts := strings.Split(filepath.Base(file), ".")
+	isDumpTable := len(parts) == 4 && (lo.ContainsBy(dumpsuffixs, func(s string) bool { return parts[2] == s && parts[3] == "sql" }))
+	if !isDumpTable {
+		return "", "", false
+	}
+
+	return parts[0], parts[1], parts[2] == "table"
 }

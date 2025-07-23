@@ -1,7 +1,7 @@
 <prompt>
 <request>
-You are a skilled Doris SQL programmer and want to reproduce a user's SQL bug with fake data.
-So your task is generating YAML configurations for the data generation tool dodo (used via `dodo gendata --genconf gendata.yaml`) basing on tables, column stats (optional) and queries (optional) in user prompt.
+You are a skilled Doris SQL programmer and want to reproduce a real-world user's SQL bug with fake data.
+Your task is generating YAML configurations for the data generation tool dodo (used via `dodo gendata --genconf gendata.yaml`) basing on tables, column stats (optional) and queries (optional) in user prompt.
 </request>
 
 <requirements>
@@ -19,53 +19,6 @@ Learn the usage of `gendata` command below (document and examples) of tool `dodo
 2. The two examples are in XML tag `examples`
 
 <document>
-## Generate and Import Data
-
-`dodo gendata --help`/`dodo import --help`
-
-You need to first [Dump Tables and Views](#dump-tables-and-views) locally, then generate and import data:
-
-```sh
-# Generate data for all dump tables in db1 and db2
-dodo gendata --dbs db1,db2
-
-# Generate data for dump table1
-dodo gendata --tables db1.table1 # or --dbs db1 --tables table1
-
-# Data can also be generated for any create table SQL without prior dump
-# P.S. It might not necessarily be Doris; other databases like Hive also work
-dodo gendata --ddl 'ddl/*.sql'
-
-# Generate data with config
-dodo gendata ... --genconf gendata.yaml
-
-
-# Import data for all tables with generated data in db1 and db2
-dodo import --dbs db1,db2
-
-# Import data for table1 with generated data
-dodo import --tables db1.table1 # or --dbs db1 --tables table1
-
-# Import any CSV data file(s) into table1
-dodo import --tables db1.table1 --data 'my_table/*.csv'
-```
-
-In implementation, the tool performs these actions in two stages based on the `--dbs` and `--tables` parameters:
-
-1. In the generation stage:
-
-    1. Scans the dump directory `output/ddl/` for matching `<db>.<table>.table.sql` files. The dump directory (or specific `<basename>.sql` files) can be specified with `--ddl`.
-    2. Combines the corresponding statistics file `<db>.stats.yaml` with the custom generation rules file (specified by `--genconf`) to determine the final generation rules.
-    3. Generates CSV files into the data generation directory `output/gendata/<db>.<table>/` (or `output/gendata/<basename>/`) according to the generation rules.
-2. In the import stage:
-
-    1. Scans the data generation directory `output/gendata/` for matching `<db>.<table>/*` data files. The data generation directory can be specified with `--data`.
-    2. Uses the `curl` command to run StreamLoad for data import.
-
-> [!TIP]
->
-> - Specifying `-Ldebug` during import shows the specific `curl` command, which is helpful for reproducing and troubleshooting issues.
-
 ### Default Generation Rules
 
 By default, `NULL` values are not generated. This can be changed by specifying `null_frequency` in [Custom Generation Rules](#custom-generation-rules).
@@ -201,12 +154,13 @@ Note: If the generator returns NULL, format will also return NULL.
 
 #### gen
 
-Optional custom generator, supports the following types, MUST be defined under `gen:`:
+Optional custom generator.
 
 > [!IMPORTANT]
 >
-> - `gen:` will override the gen rules at the column level (except `null_frequency` and `format`), makes `length`, `min/max` no longer effective.
+> - One of the following generator key MUST be defined under a `gen`: `inc`, `enum`, `parts`, `ref`, `type`, and they can only be defined under `gen`
 > - Only one generator can be specified at the same time, for example, if the `inc` generator is specified, the `enum` generator cannot be specified
+> - `gen` will override the gen rules at the column level (except `null_frequency` and `format`), makes `length`, `min/max` no longer effective
 
 ##### inc
 
@@ -225,7 +179,7 @@ columns:
 
 ##### enum
 
-Enum generator, randomly selects from given values, values can be literals or generation rules. There is an optional config `weights` (can only be used with `enum`):
+Enum generator (aka. `enums`), randomly selects from given values, values can be literals or generators (the type will be inferred from parent generator). There is an optional config `weights` (can only be used with `enum`):
 
 ```yaml
 columns:
@@ -236,9 +190,9 @@ columns:
 
   - name: t_str
     gen:
-      # randomly choose one generation rule to generate value, each has 25% probability
+      # randomly choose one literal or generators to generate value, each has 25% probability
       enum:
-        - length: 5
+        - "123"
         - length: {min: 5, max: 10}
         - format: "my name is {{username}}"
         - gen:
@@ -256,7 +210,7 @@ columns:
 
 Must be used together with [`format`](#format). Flexibly combine multiple values ​​to produce the final result.
 
-`parts` generates multiple values ​​at a time and fills them into `{{%xxx}}` of [`format`](#format) in order. The value of each part can be a literal or a generation rule:
+`parts` generates multiple values ​​at a time and fills them into `{{%xxx}}` of [`format`](#format) in order. The value of each part can be a literal or a generator(the type will be inferred from parent generator):
 
 ```yaml
 columns:
@@ -1050,7 +1004,7 @@ tables:
           inc: 2
           start: 100
 
-      # enum generator, enum value can be any literal or a generation rule
+      # enum generator, enum value can be any literal or a generator
       - name: t_null_string
         null_frequency: 0.5
         format: "What's your name? My name is {{%s}}."
@@ -1060,7 +1014,7 @@ tables:
           weights: [0.2, 0.6, 0.2] # optional, the probabilities of being chosen
       - name: t_bigint
         gen:
-          # randomly choose one generation rule to generate value, each has 25% probability
+          # randomly choose one generator to generate value, each has 25% probability
           enum:
             - {min: 0, max: 5}
             - {min: 5, max: 10}
@@ -1068,7 +1022,7 @@ tables:
             - gen:
                 enum: [1, 2, 3]
 
-      # parts generator, part value can be any literal or a generation rule, parts must combine with format
+      # parts generator, part value can be any literal or a generator, parts must combine with format
       - name: date1
         format: "{{year}}-{{%02d}}-{{%02d}}"
         gen:

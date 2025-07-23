@@ -10,7 +10,7 @@ which sd || echo "please install https://github.com/chmln/sd first"
 
 # Replace gendata.xml
 readme=$(cat ../../README.md)
-introduction=$(cat ../../introduction.md | grep -A10000 '## Generate and Import Data' | grep -B10000 '### AI Generation' | grep -v '### AI Generation')
+introduction=$(cat ../../introduction.md | grep -A10000 '### Default Generation Rules' | grep -B10000 '### AI Generation' | grep -v '### AI Generation')
 example=$(cat ../../example/gendata.yaml)
 example_tables=$(cat ../../example/ddl/*.table.sql)
 example_stats=$(cat ../../example/ddl/*.stats.yaml)

@@ -26,6 +26,12 @@ var (
 		`_`, `\_`,
 		`%`, `\%`,
 	)
+
+	AllSchemaTypes = []SchemaType{
+		SchemaTypeTable,
+		SchemaTypeView,
+		SchemaTypeMaterializedView,
+	}
 )
 
 type SchemaType string
@@ -35,10 +41,6 @@ var (
 	SchemaTypeView             SchemaType = "VIEW"
 	SchemaTypeMaterializedView SchemaType = "MATERIALIZED_VIEW"
 )
-
-func (s SchemaType) Lower() string {
-	return strings.ToLower(string(s))
-}
 
 func (s SchemaType) sanitize() SchemaType {
 	switch s {
@@ -50,6 +52,10 @@ func (s SchemaType) sanitize() SchemaType {
 		logrus.Warnf("unknown schema type: %s", s)
 		return SchemaType(strings.ReplaceAll(string(s), " ", "_"))
 	}
+}
+
+func (s SchemaType) Lower() string {
+	return strings.ToLower(string(s))
 }
 
 type DBSchema struct {

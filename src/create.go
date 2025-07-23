@@ -38,7 +38,7 @@ func RunCreateSQL(ctx context.Context, conn *sqlx.DB, db string, sqlFile string,
 
 		var (
 			name       string
-			schemaType string
+			schemaType SchemaType
 		)
 		if create, ok := s.StatementBase().(*parser.SupportedCreateStatementAliasContext); ok {
 			// 1. table or view
@@ -55,10 +55,10 @@ func RunCreateSQL(ctx context.Context, conn *sqlx.DB, db string, sqlFile string,
 			}
 			if createTable != nil {
 				name = strings.ReplaceAll(createTable.GetName().GetText(), "`", "")
-				schemaType = "table"
+				schemaType = SchemaTypeTable
 			} else {
 				name = strings.ReplaceAll(createView.GetName().GetText(), "`", "")
-				schemaType = "view"
+				schemaType = SchemaTypeView
 			}
 		} else if create, ok := s.StatementBase().(*parser.MaterializedViewStatementAliasContext); ok {
 			// 2. materialized view
@@ -67,7 +67,7 @@ func RunCreateSQL(ctx context.Context, conn *sqlx.DB, db string, sqlFile string,
 				continue
 			}
 			name = strings.ReplaceAll(createMTMV.GetMvName().GetText(), "`", "")
-			schemaType = "materialized view"
+			schemaType = SchemaTypeMaterializedView
 		} else {
 			continue
 		}
@@ -84,9 +84,11 @@ func RunCreateSQL(ctx context.Context, conn *sqlx.DB, db string, sqlFile string,
 			return "", err
 		}
 
-		if _, err := c.ExecContext(ctx, InternalSqlComment+fmt.Sprintf("USE `%s`", db)); err != nil {
-			c.Close()
-			return "", fmt.Errorf("use db '%s' failed: %v", db, err)
+		if db != "" {
+			if _, err := c.ExecContext(ctx, InternalSqlComment+fmt.Sprintf("USE `%s`", db)); err != nil {
+				c.Close()
+				return "", fmt.Errorf("use db '%s' failed: %v", db, err)
+			}
 		}
 		startedAt := time.Now()
 		_, err = c.ExecContext(ctx, InternalSqlComment+stmt)
@@ -95,7 +97,7 @@ func RunCreateSQL(ctx context.Context, conn *sqlx.DB, db string, sqlFile string,
 
 		if err != nil {
 			if strings.Contains(err.Error(), " already exists") {
-				logrus.Infof("skip creating %s '%s.%s', already exists\n", schemaType, db, name)
+				logrus.Infof("skip creating %s '%s.%s', already exists\n", schemaType.Lower(), db, name)
 				continue
 			} else if strings.Contains(err.Error(), " does not exist") {
 				// may deppends on other table/view
@@ -104,7 +106,7 @@ func RunCreateSQL(ctx context.Context, conn *sqlx.DB, db string, sqlFile string,
 			return "", err
 		}
 
-		logrus.Infof("%s '%s.%s' created, cost %.2fs", schemaType, db, name, duration.Seconds())
+		logrus.Infof("%s '%s.%s' created, cost %.2fs", schemaType.Lower(), db, name, duration.Seconds())
 	}
 
 	return "", nil

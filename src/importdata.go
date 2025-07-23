@@ -3,6 +3,7 @@ package src
 import (
 	"bufio"
 	"context"
+	"errors"
 	"fmt"
 	"os"
 	"os/exec"
@@ -68,7 +69,7 @@ func StreamLoad(ctx context.Context, host, httpPort, user, password, db, table, 
 	result := make(map[string]any)
 	if err_ := json.Unmarshal(stdout, &result); err_ != nil {
 		logrus.Errorf("Stream load get result failed for '%s.%s' at data file '%s'\n", db, table, file)
-		return err_
+		return errors.New("stream load failed")
 	}
 	if status, ok := result["Status"]; !ok || status.(string) != "Success" {
 		msg := result["Message"]
@@ -80,7 +81,7 @@ func StreamLoad(ctx context.Context, host, httpPort, user, password, db, table, 
 		}
 		details := result["ErrorURL"]
 		logrus.Errorf("Stream load failed for '%s.%s' at data file '%s', message: %v, details: %v\n", db, table, file, msg, details)
-		return err
+		return errors.New("stream load failed")
 	}
 
 	return nil

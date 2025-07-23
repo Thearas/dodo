@@ -119,9 +119,10 @@ func init() {
 		if err := initConfig(cmd); err != nil {
 			return err
 		}
-		db := setupCompletionDB()
-		if db == nil {
-			return errors.New("failed to connect to database for completion")
+		if err := setupCompletionDB(); err != nil {
+			cobra.CompErrorln(fmt.Sprintf("failed to connect to database for completion, host: %s, port: %d, user: %s, err: %v",
+				GlobalConfig.DBHost, GlobalConfig.DBPort, GlobalConfig.DBUser, err))
+			return err
 		}
 		return nil
 	}
@@ -142,6 +143,7 @@ func init() {
 		if err := compInit(cmd); err != nil {
 			return nil, cobra.ShellCompDirectiveError
 		}
+		cobra.CompErrorln("Using completionDB for dbs completion")
 		items, err := src.ShowDatabases(cmd.Context(), completionDB, tocomplete)
 		if len(items) == 0 || err != nil {
 			return []string{"No database found"}, cobra.ShellCompDirectiveError
@@ -184,6 +186,8 @@ func initConfig(cmd *cobra.Command, prefixs ...string) error {
 	if isCfgInited.Swap(true) {
 		return nil
 	}
+
+	cobra.CompDebugln("Using config file: "+GlobalConfig.ConfigFile, true)
 
 	cfgFile := GlobalConfig.ConfigFile
 	if cfgFile != "" {
@@ -294,15 +298,15 @@ func completeDBTables(dbtableNotFoundErr ...string) error {
 	return nil
 }
 
-func setupCompletionDB() *sqlx.DB {
+func setupCompletionDB() error {
 	if completionDB != nil {
-		return completionDB
+		return nil
 	}
 
 	db, err := connectDBWithoutDBName()
 	if err != nil {
-		return nil
+		return err
 	}
 	completionDB = db
-	return db
+	return nil
 }

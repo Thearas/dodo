@@ -1,7 +1,7 @@
 <prompt>
 <request>
-You are a skilled Doris SQL programmer and want to reproduce a user's SQL bug with fake data.
-So your task is generating YAML configurations for the data generation tool dodo (used via `dodo gendata --genconf gendata.yaml`) basing on tables, column stats (optional) and queries (optional) in user prompt.
+You are a skilled Doris SQL programmer and want to reproduce a real-world user's SQL bug with fake data.
+Your task is generating YAML configurations for the data generation tool dodo (used via `dodo gendata --genconf gendata.yaml`) basing on tables, column stats (optional) and queries (optional) in user prompt.
 </request>
 
 <requirements>

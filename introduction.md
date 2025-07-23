@@ -316,12 +316,13 @@ Note: If the generator returns NULL, format will also return NULL.
 
 #### gen
 
-Optional custom generator, supports the following types, MUST be defined under `gen:`:
+Optional custom generator.
 
 > [!IMPORTANT]
 >
-> - `gen:` will override the gen rules at the column level (except `null_frequency` and `format`), makes `length`, `min/max` no longer effective.
+> - One of the following generator key MUST be defined under a `gen`: `inc`, `enum`, `parts`, `ref`, `type`, and they can only be defined under `gen`
 > - Only one generator can be specified at the same time, for example, if the `inc` generator is specified, the `enum` generator cannot be specified
+> - `gen` will override the gen rules at the column level (except `null_frequency` and `format`), makes `length`, `min/max` no longer effective
 
 ##### inc
 
@@ -340,7 +341,7 @@ columns:
 
 ##### enum
 
-Enum generator, randomly selects from given values, values can be literals or generation rules. There is an optional config `weights` (can only be used with `enum`):
+Enum generator (aka. `enums`), randomly selects from given values, values can be literals or generators (the type will be inferred from parent generator). There is an optional config `weights` (can only be used with `enum`):
 
 ```yaml
 columns:
@@ -351,9 +352,9 @@ columns:
 
   - name: t_str
     gen:
-      # randomly choose one generation rule to generate value, each has 25% probability
+      # randomly choose one literal or generators to generate value, each has 25% probability
       enum:
-        - length: 5
+        - "123"
         - length: {min: 5, max: 10}
         - format: "my name is {{username}}"
         - gen:
@@ -371,7 +372,7 @@ columns:
 
 Must be used together with [`format`](#format). Flexibly combine multiple values ​​to produce the final result.
 
-`parts` generates multiple values ​​at a time and fills them into `{{%xxx}}` of [`format`](#format) in order. The value of each part can be a literal or a generation rule:
+`parts` generates multiple values ​​at a time and fills them into `{{%xxx}}` of [`format`](#format) in order. The value of each part can be a literal or a generator(the type will be inferred from parent generator):
 
 ```yaml
 columns:
@@ -787,14 +788,13 @@ Three steps:
     user: root
     dbs: [example]
 
-    llm: deepseek-chat    # or o3-mini, etc.
-    llm-api-key: sk-xxxx  # Your LLM API key
+    llm: deepseek-chat      # or o3-mini, etc.
+    llm-api-key: sk-xxxx    # LLM API key
+    anonymize: true         # anonymize SQL before sending to LLM
     EOF
     ```
 
-3. Run `gemini -s` in the CLI, then type `dodo --config: @dodo.yaml, prompt: @example/usercase/prompt.txt` in the Gemini dialog and press Enter.
-
-It will then run autonomously. We only need to approve its execution plans.
+3. Run `gemini -iyp 'Your task: @example/usercase/prompt.txt, do not ask any questions, just proceed'` in CLI
 
 ---
 

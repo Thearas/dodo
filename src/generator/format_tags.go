@@ -37,6 +37,11 @@ var templateExclusion = []string{
 }
 
 func SetupFormatTags() {
+	if FormatTags != nil {
+		// already setup
+		return
+	}
+
 	v := reflect.ValueOf(gofakeit.GlobalFaker)
 
 	FormatTags = map[string]reflect.Value{}

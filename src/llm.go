@@ -26,7 +26,7 @@ func LLMGendataConfig(
 	tables, columnStats, sqls []string,
 ) (string, error) {
 	if model == "" {
-		model = "deepseek-coder"
+		model = "deepseek-chat"
 	}
 	if baseURL == "" {
 		if strings.HasPrefix(strings.ToLower(model), "deepseek") {
