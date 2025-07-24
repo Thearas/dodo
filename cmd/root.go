@@ -96,7 +96,7 @@ func init() {
 	rootCmd.PersistentFlags().SortFlags = false
 	rootCmd.Flags().SortFlags = false
 
-	parallel := min(runtime.NumCPU(), DefaultParallel)
+	parallel := max(min(runtime.NumCPU()-2, DefaultParallel), 1) // at least 1 worker, no more than NumCPU-2
 
 	pFlags := rootCmd.PersistentFlags()
 	pFlags.StringVarP(&GlobalConfig.ConfigFile, "config", "C", "", "Config file (default is $HOME/.dodo.yaml)")

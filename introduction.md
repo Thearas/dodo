@@ -106,7 +106,7 @@ output
 ### Other Dump Parameters
 
 - `--analyze`: Automatically runs `ANALYZE TABLE <table> WITH SYNC` before dumping a table to make statistics more accurate. Default is off.
-- `--parallel`: Controls the dump concurrency. Increasing it speeds up the dump; decreasing it uses fewer resources. Default is `min(machine_cores, 10)`.
+- `--parallel`: Controls the dump concurrency. Increasing it speeds up the dump; decreasing it uses fewer resources. Default is `min(machine_cores-2, 10)`.
 - `--dump-stats`: Also dumps table statistics when dumping tables. Statistics are dump to `output/ddl/db.stats.yaml`. Default is on.
 - `--only-select`: Whether to dump only `SELECT` statements. Default is on.
 - `--from` and `--to`: Dump SQL within a specified time range.

@@ -106,7 +106,7 @@ output
 ### 其他导出参数
 
 - `--analyze` 导出表前自动跑 `ANALYZE TABLE <table> WITH SYNC`，使统计信息更准确，默认关闭
-- `--parallel` 控制导出并发量，调大导出更快，调小占用资源更少，默认 `min(机器核数, 10)`
+- `--parallel` 控制导出并发量，调大导出更快，调小占用资源更少，默认 `min(机器核数-2, 10)`
 - `--dump-stats` 导出表时也导出统计信息，导出在 `output/ddl/db.stats.yaml` 文件，默认开启
 - `--only-select` 是否从只导出 `SELECT` 语句，默认开启
 - `--from` 和 `--to` 导出时间范围内的 SQL
