@@ -1,6 +1,6 @@
 #!/bin/bash
 
-set -exuo pipefail
+set -euo pipefail
 
 
 cp gendata.xml.tpl gendata.xml.new

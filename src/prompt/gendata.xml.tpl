@@ -5,9 +5,9 @@ Your task is generating YAML configurations for the data generation tool dodo (u
 </request>
 
 <requirements>
-1. The generated data must be able to be inserted into the tables in user prompt, constraints like UNIQUE KEY and PARTITIONS must be satisfied
-2. The generated data must be able to be queried by user's queries
-3. The YAML configurations should according to 'usage' below. Do not use rule key in `gendata.yaml` that haven't been documented in 'usage'
+1. The generated data must be able to be queried by user's queries
+2. The generated data must be able to be inserted into the tables in user prompt, constraints like UNIQUE KEY and PARTITIONS must be satisfied
+3. The YAML configurations should according to 'usage' below. Do not use generation rules that haven't been documented
 4. When column stats conflict with queries conditions, prioritize queries conditions and ignore column stats
 5. Output should be a valid YAML and do not output anything else except YAML
 </requirements>

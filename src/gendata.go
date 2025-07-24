@@ -18,7 +18,10 @@ const (
 	GenDataFileFirstLinePrefix = "columns:" // optional first line prefix if stream load needs 'columns: xxx' header
 )
 
-type GenRule = gen.GenRule
+type (
+	GenRule         = gen.GenRule
+	GenconfEndError = gen.GenconfEndError
+)
 
 func NewTableGen(ddlfile, createTableStmt string, stats *TableStats, rows int, streamloadColNames []string) (*TableGen, error) {
 	// parse create-table statement
@@ -42,9 +45,9 @@ func NewTableGen(ddlfile, createTableStmt string, stats *TableStats, rows int, s
 			s.Count = stats.RowCount
 			return s.Name, s
 		})
-		logrus.Debugf("using stats for table '%s'\n", table)
+		logrus.Debugf("using stats for table '%s'", table)
 	} else {
-		logrus.Debugf("stats not found for table '%s'\n", table)
+		logrus.Debugf("stats not found for table '%s'", table)
 	}
 
 	// get custom table gen rule

@@ -1,6 +1,8 @@
 package generator
 
 import (
+	"errors"
+	"io"
 	"math"
 	"os"
 	"strconv"
@@ -13,12 +15,10 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
+const GLOBAL_NULL_FREQUENCY = 0.0 // Default null frequency is 0%
+
 var (
-	GlobalGenRule = GenRule{
-		"null_frequency": GLOBAL_NULL_FREQUENCY,
-	}
-	GLOBAL_NULL_FREQUENCY = 0.0 // Default null frequency is 0%
-	MAX_DECIMAL_INT_LEN   = len(strconv.FormatInt(math.MaxInt64, 10))
+	MAX_DECIMAL_INT_LEN = len(strconv.FormatInt(math.MaxInt64, 10))
 
 	TypeAlias = map[string]string{
 		"INTEGER":    "INT",
@@ -33,7 +33,48 @@ var (
 		"TIMESTAMP":  "DATETIME",
 	}
 
-	DefaultTypeGenRules = lo.MapValues(map[string]GenRule{
+	globalGenRule       GenRule
+	DefaultTypeGenRules map[string]any
+)
+
+type GenconfEndError struct{}
+
+func (*GenconfEndError) Error() string {
+	return "genconf ended"
+}
+
+func newGlobalGenRule(configFile string, configIdx int) (GenRule, error) {
+	genrule := make(GenRule)
+	if configFile != "" {
+		f, err := os.Open(configFile)
+		if err != nil {
+			return nil, err
+		}
+
+		d := yaml.NewDecoder(f)
+		for i := 0; i <= configIdx; i++ {
+			genrule = make(GenRule)
+			if err := d.Decode(&genrule); err != nil {
+				if errors.Is(err, io.EOF) {
+					return nil, &GenconfEndError{}
+				}
+				return nil, err
+			}
+		}
+	}
+	if genrule == nil {
+		// maybe an empty YAML
+		genrule = make(GenRule)
+	}
+	genrule["null_frequency"] = GLOBAL_NULL_FREQUENCY
+	if g, ok := genrule["type"]; !ok || g == nil {
+		genrule["type"] = GenRule{}
+	}
+	return genrule, nil
+}
+
+func newDefaultTypeGenRules() map[string]any {
+	return lo.MapValues(map[string]GenRule{
 		"ARRAY": {
 			"length": GenRule{
 				"min": 1,
@@ -119,28 +160,24 @@ var (
 			"max": time.Now(),
 		},
 	}, func(v GenRule, _ string) any { return v })
-)
+}
 
-func SetupGenRules(configFile string) error {
-	if configFile != "" {
-		b, err := os.ReadFile(configFile)
-		if err != nil {
-			return err
-		}
-		if err := yaml.Unmarshal(b, &GlobalGenRule); err != nil {
-			return err
-		}
+func SetupGenRules(configFile string, configIdx int) (err error) {
+	// init GlobalGenRule and DefaultTypeGenRules
+	globalGenRule, err = newGlobalGenRule(configFile, configIdx)
+	if err != nil {
+		return err
 	}
-	if g, ok := GlobalGenRule["type"]; !ok || g == nil {
-		GlobalGenRule["type"] = GenRule{}
-	}
-	typeGenRules := lo.MapEntries(GlobalGenRule["type"].(GenRule), func(ty string, g any) (string, any) {
+	DefaultTypeGenRules = newDefaultTypeGenRules()
+
+	// merge GlobalGenRule["type"] into default type gen rules
+	typeGenRules := lo.MapEntries(globalGenRule["type"].(GenRule), func(ty string, g any) (string, any) {
 		if g == nil {
 			g = GenRule{}
 		}
 		genRule, ok := g.(GenRule)
 		if !ok {
-			logrus.Fatalf("Type gen rule for '%s' should be a map, but got '%T'\n", ty, g)
+			logrus.Fatalf("Type gen rule for '%s' should be a map, but got '%T'", ty, g)
 		}
 		return strings.ToUpper(ty), genRule
 	})
@@ -153,7 +190,7 @@ func SetupGenRules(configFile string) error {
 			panic("Default type gen rule should be a map")
 		}
 		if r, ok := genRule["null_frequency"]; !ok || r == nil {
-			genRule["null_frequency"] = GlobalGenRule["null_frequency"]
+			genRule["null_frequency"] = globalGenRule["null_frequency"]
 		}
 	}
 
@@ -164,9 +201,9 @@ func GetCustomTableGenRule(table string) (rows int, colrules map[string]GenRule)
 	tableParts := strings.Split(table, ".")
 	tablePart := tableParts[len(tableParts)-1]
 
-	g, ok := GlobalGenRule["tables"].([]any)
+	g, ok := globalGenRule["tables"].([]any)
 	if !ok || len(g) == 0 {
-		logrus.Debugf("no custom gen rule for table '%s'\n", table)
+		logrus.Debugf("no custom gen rule for table '%s'", table)
 		return 0, map[string]GenRule{}
 	}
 
@@ -178,7 +215,7 @@ func GetCustomTableGenRule(table string) (rows int, colrules map[string]GenRule)
 		return tg["name"] == tablePart
 	})
 	if !found {
-		logrus.Debugf("no custom gen rule for table '%s'\n", table)
+		logrus.Debugf("no custom gen rule for table '%s'", table)
 		return 0, map[string]GenRule{}
 	}
 	tg := tg_.(GenRule) //nolint:revive
@@ -189,7 +226,7 @@ func GetCustomTableGenRule(table string) (rows int, colrules map[string]GenRule)
 	// get table columns gen rule
 	cgs, ok := tg["columns"].([]any)
 	if !ok || len(cgs) == 0 {
-		logrus.Debugf("no custom gen rule for table columns '%s'\n", table)
+		logrus.Debugf("no custom gen rule for table columns '%s'", table)
 		return 0, map[string]GenRule{}
 	}
 
@@ -202,7 +239,7 @@ func GetCustomTableGenRule(table string) (rows int, colrules map[string]GenRule)
 
 		name, ok := cg["name"].(string)
 		if !ok {
-			logrus.Fatalf("Column field #%d has no name in table '%s'\n", i, table)
+			logrus.Fatalf("Column field #%d has no name in table '%s'", i, table)
 		}
 		i++
 		return name, cg

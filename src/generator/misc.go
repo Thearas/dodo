@@ -94,7 +94,7 @@ func CastMinMax[R int8 | int16 | int | int32 | int64 | float32 | float64 | time.
 		minBigger = any(maxVal).(time.Time).Before(any(minVal).(time.Time))
 	}
 	if minBigger {
-		logrus.Warnf("Column '%s' max(%v) < min(%v), set max to min\n", colpath, maxVal, minVal)
+		logrus.Warnf("Column '%s' max(%v) < min(%v), set max to min", colpath, maxVal, minVal)
 		maxVal = minVal
 	}
 	return minVal, maxVal

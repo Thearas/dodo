@@ -50,7 +50,7 @@ func LLMGendataConfig(
 <queries>
 %s
 </queries>
-			`,
+`,
 		strings.Join(tables, "\n"),
 		strings.Join(columnStats, "\n---\n"),
 		strings.Join(sqls, "\n"))
@@ -60,7 +60,7 @@ func LLMGendataConfig(
 <additional-user-prompt>
 %s
 </additional-user-prompt>
-		`, userPrompt, prompt_)
+`, userPrompt, prompt_)
 	}
 
 	logrus.Debugln("LLM user prompt:", userPrompt)
@@ -76,6 +76,7 @@ func LLMGendataConfig(
 	c := client.Chat.Completions.NewStreaming(ctx, openai.ChatCompletionNewParams{
 		Model:       model,
 		Temperature: openai.Float(0.3),
+		TopP:        openai.Float(0.85),
 		Stop:        stop,
 		Messages: []openai.ChatCompletionMessageParamUnion{
 			openai.SystemMessage(prompt.Gendata),

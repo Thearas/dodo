@@ -30,13 +30,12 @@ func init() {
 	}
 }
 
-func Setup(genconf string) error {
+func Setup(genconf string, confIdx int) error {
 	SetupFormatTags()
-	return SetupGenRules(genconf)
+	return SetupGenRules(genconf, confIdx)
 }
 
 type GenRule = map[string]any
-
 type Gen interface {
 	Gen() any
 }
@@ -72,7 +71,7 @@ func (v *TypeVisitor) GetGen(type_ parser.IDataTypeContext) Gen {
 	// Merge global (aka. default) generation rules.
 	v.MergeDefaultRule(baseType)
 	if logrus.GetLevel() > logrus.DebugLevel {
-		logrus.Tracef("gen rule of '%s': %s\n", v.Colpath, string(MustJSONMarshal(v.GenRule)))
+		logrus.Tracef("gen rule of '%s': %s", v.Colpath, string(MustJSONMarshal(v.GenRule)))
 	}
 
 	if customGenRule, ok := v.GetRule("gen").(GenRule); ok {
@@ -87,10 +86,10 @@ func (v *TypeVisitor) GetGen(type_ parser.IDataTypeContext) Gen {
 	if format, ok := v.GetRule("format").(string); ok && format != "" {
 		g, err = NewFormatGenerator(format, g)
 		if err != nil {
-			logrus.Fatalf("The format rule '%s' of column '%s' compile failed, err: %v\n", format, v.Colpath, err)
+			logrus.Fatalf("The format rule '%s' of column '%s' compile failed, err: %v", format, v.Colpath, err)
 		}
 	} else if _, ok := g.(*PartsGen); ok {
-		logrus.Fatalf("Parts generator cannot be used without format rule, please add 'format' rule for column '%s'\n", v.Colpath)
+		logrus.Fatalf("Parts generator cannot be used without format rule, please add 'format' rule for column '%s'", v.Colpath)
 	}
 
 	// null generator
@@ -118,17 +117,17 @@ func (v *TypeVisitor) getCustomGen(type_ parser.IDataTypeContext, customGenRule 
 			continue
 		}
 		if g != nil {
-			logrus.Fatalf("Multiple custom generators found for column '%s', only one is allowed, but got both: %s and %s\n", v.Colpath, genName, name)
+			logrus.Fatalf("Multiple custom generators found for column '%s', only one is allowed, but got both: %s and %s", v.Colpath, genName, name)
 		}
 
 		g, err = newCustomGen(v, type_, customGenRule)
 		if err != nil {
-			logrus.Fatalf("Invalid custom generator '%s' for column '%s', err: %v\n", name, v.Colpath, err)
+			logrus.Fatalf("Invalid custom generator '%s' for column '%s', err: %v", name, v.Colpath, err)
 		}
 		genName = name
 	}
 	if g == nil {
-		logrus.Fatalf("Custom generator not found for column '%s', expect one of %v\n",
+		logrus.Fatalf("Custom generator not found for column '%s', expect one of %v",
 			v.Colpath,
 			lo.MapToSlice(CustomGenConstructors, func(name string, _ CustomGenConstructor) string { return name }),
 		)
@@ -151,7 +150,7 @@ func (v *TypeVisitor) getTypeGen(type_ parser.IDataTypeContext, baseType string)
 			// Handle map type
 			kv := ty.AllDataType()
 			if len(kv) != 2 {
-				logrus.Fatalf("Invalid map type: '%s' for column '%s', expected 2 types for key and value\n", ty.GetText(), v.Colpath)
+				logrus.Fatalf("Invalid map type: '%s' for column '%s', expected 2 types for key and value", ty.GetText(), v.Colpath)
 			}
 
 			// Handle key-value pair in map
@@ -172,7 +171,7 @@ func (v *TypeVisitor) getTypeGen(type_ parser.IDataTypeContext, baseType string)
 			fieldRules, ok := fields_.([]any) // Ensure fields is a slice of maps
 			if !ok {
 				if fields_ != nil {
-					logrus.Fatalf("Invalid struct fields type '%T' for column '%s'\n", fields_, v.Colpath)
+					logrus.Fatalf("Invalid struct fields type '%T' for column '%s'", fields_, v.Colpath)
 				}
 				fieldRules = lo.ToAnySlice([]GenRule{})
 			}
@@ -180,11 +179,11 @@ func (v *TypeVisitor) getTypeGen(type_ parser.IDataTypeContext, baseType string)
 			fields := lo.SliceToMap(fieldRules, func(field_ any) (string, GenRule) {
 				field, ok := field_.(GenRule)
 				if !ok {
-					logrus.Fatalf("Invalid struct field #%d in column '%s'\n", i, v.Colpath)
+					logrus.Fatalf("Invalid struct field #%d in column '%s'", i, v.Colpath)
 				}
 				fieldName, ok := field["name"].(string)
 				if !ok {
-					logrus.Fatalf("Struct field #%d has no name in column '%s'\n", i, v.Colpath)
+					logrus.Fatalf("Struct field #%d has no name in column '%s'", i, v.Colpath)
 				}
 				i++
 				return fieldName, field
@@ -196,7 +195,7 @@ func (v *TypeVisitor) getTypeGen(type_ parser.IDataTypeContext, baseType string)
 			}
 			g = g_
 		default:
-			logrus.Fatalf("Unsupported complex type: '%s' for column '%s'\n", ty.GetComplex_().GetText(), v.Colpath)
+			logrus.Fatalf("Unsupported complex type: '%s' for column '%s'", ty.GetComplex_().GetText(), v.Colpath)
 		}
 	case *parser.PrimitiveDataTypeContext:
 		min_, max_ := v.GetMinMax()
@@ -218,13 +217,13 @@ func (v *TypeVisitor) getTypeGen(type_ parser.IDataTypeContext, baseType string)
 				genRule = maps.Clone(v.GenRule)
 				delete(genRule, "structure")
 			} else {
-				logrus.Fatalf("JSON/JSONB/VARIANT must have gen rule 'structure' or 'gen' at column '%s'\n", v.Colpath)
+				logrus.Fatalf("JSON/JSONB/VARIANT must have gen rule 'structure' or 'gen' at column '%s'", v.Colpath)
 			}
 
 			p := parser.NewParser(v.Colpath, structure)
 			dataType := p.DataType()
 			if err := p.ErrListener.LastErr; err != nil {
-				logrus.Fatalf("Invalid JSON structure '%s' for column '%s': %v\n", structure, v.Colpath, err)
+				logrus.Fatalf("Invalid JSON structure '%s' for column '%s': %v", structure, v.Colpath, err)
 			}
 			visitor := NewTypeVisitor(v.Colpath, genRule)
 			g = visitor.GetGen(dataType)
@@ -271,17 +270,17 @@ func (v *TypeVisitor) getTypeGen(type_ parser.IDataTypeContext, baseType string)
 			}
 			if precision > p {
 				precision = p
-				// logrus.Debugf("Precision '%d' is larger than the defined precision '%d' for column '%s', using %d instead\n", precision, p, v.Colpath, p)
+				// logrus.Debugf("Precision '%d' is larger than the defined precision '%d' for column '%s', using %d instead", precision, p, v.Colpath, p)
 			}
 			if len(intVals) > 1 {
 				s = cast.ToInt(intVals[1].GetText())
 			}
 			if s < 0 || s > precision {
-				// logrus.Debugf("Scale '%d' is invalid for precision '%d' in column '%s', using 0 instead\n", s, precision, v.Colpath)
+				// logrus.Debugf("Scale '%d' is invalid for precision '%d' in column '%s', using 0 instead", s, precision, v.Colpath)
 				s = 0
 			}
 			if scale > s {
-				// logrus.Debugf("Scale '%d' is larger than the defined scale '%d' for column '%s', using %d instead\n", scale, s, v.Colpath, s)
+				// logrus.Debugf("Scale '%d' is larger than the defined scale '%d' for column '%s', using %d instead", scale, s, v.Colpath, s)
 				scale = s
 			}
 
@@ -358,7 +357,7 @@ func (v *TypeVisitor) getTypeGen(type_ parser.IDataTypeContext, baseType string)
 		case "CHAR":
 			length_ := ty.INTEGER_VALUE(0)
 			if length_ == nil {
-				logrus.Fatalf("CHAR type must have a length in column '%s'\n", v.Colpath)
+				logrus.Fatalf("CHAR type must have a length in column '%s'", v.Colpath)
 			}
 			length := min(max(1, cast.ToInt(length_.GetText())), 255)
 			g = NewFuncGen(func() any { return RandomStr(length, length) })
@@ -370,7 +369,7 @@ func (v *TypeVisitor) getTypeGen(type_ parser.IDataTypeContext, baseType string)
 			// skip gen HLL
 			g = NewFuncGen(func() any { return "" })
 		default: // TODO: AGG_STATE, QUANTILE_STATE
-			logrus.Fatalf("Unsupported column type '%s' for column '%s'\n", type_.GetText(), v.Colpath)
+			logrus.Fatalf("Unsupported column type '%s' for column '%s'", type_.GetText(), v.Colpath)
 		}
 	}
 	return g
@@ -383,7 +382,7 @@ func (v *TypeVisitor) GetBaseType(type_ parser.IDataTypeContext) (t string) {
 	case *parser.PrimitiveDataTypeContext:
 		t = ty.PrimitiveColType().GetType_().GetText()
 	default:
-		logrus.Fatalf("Unsupported column type '%s' for column '%s'\n", type_.GetText(), v.Colpath)
+		logrus.Fatalf("Unsupported column type '%s' for column '%s'", type_.GetText(), v.Colpath)
 	}
 	return strings.ToUpper(t)
 }
@@ -432,7 +431,7 @@ func (v *TypeVisitor) GetMinMax() (any, any) {
 func (v *TypeVisitor) GetLength() (minVal, maxVal int) {
 	l := v.GetRule("length")
 	if l == nil {
-		logrus.Fatalf("length not found for column '%s'\n", v.Colpath)
+		logrus.Fatalf("length not found for column '%s'", v.Colpath)
 	}
 
 	switch l := l.(type) {
@@ -443,7 +442,7 @@ func (v *TypeVisitor) GetLength() (minVal, maxVal int) {
 		minVal, maxVal = cast.ToInt(l["min"]), cast.ToInt(l["max"])
 	}
 	if maxVal < minVal {
-		logrus.Debugf("length max(%d) < min(%d), set max to min for column '%s'\n", maxVal, minVal, v.Colpath)
+		logrus.Debugf("length max(%d) < min(%d), set max to min for column '%s'", maxVal, minVal, v.Colpath)
 		minVal = maxVal
 	}
 	return
@@ -475,7 +474,7 @@ func (v *TypeVisitor) GetChildGen(name string, childType parser.IDataTypeContext
 func (v *TypeVisitor) GetNullFrequency() float32 {
 	nullFrequency, err := cast.ToFloat32E(v.GetRule("null_frequency", GLOBAL_NULL_FREQUENCY))
 	if err != nil || nullFrequency < 0 || nullFrequency > 1 {
-		logrus.Fatalf("Invalid null frequency '%v' for column '%s': %v\n", v.GetRule("null_frequency"), v.Colpath, err)
+		logrus.Fatalf("Invalid null frequency '%v' for column '%s': %v", v.GetRule("null_frequency"), v.Colpath, err)
 	}
 	return nullFrequency
 }

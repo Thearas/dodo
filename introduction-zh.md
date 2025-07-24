@@ -210,6 +210,24 @@ dodo import --tables db1.table1 --data 'my_table/*.csv'
 
 生成数据时用 `--genconf gendata.yaml` 指定，完整示例见 [example/gendata.yaml](./example/gendata.yaml)。
 
+你可以将多个 `gendata.yaml` 内容合并到一个文件中（以 `---` 分隔）。这相当于多次调用 `dodo gendata --genconf <file>`。例如：
+
+```yaml
+# Dataset 1
+null_frequency: 0
+type:
+...
+tables:
+...
+---
+# Dataset 2
+null_frequency: 0.05
+type:
+...
+tables:
+...
+```
+
 #### 全局规则与表规则
 
 生成规则可以分为全局和表级别。表级别会覆盖全局配置。

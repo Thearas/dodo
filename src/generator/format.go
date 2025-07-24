@@ -61,7 +61,7 @@ func (g *FormatGen) Gen() any {
 		return WriteColVal(w.(ColValWriter), result)
 	})
 	if err != nil {
-		logrus.Errorf("format execute templace failed, err: %v\n", err)
+		logrus.Errorf("format execute templace failed, err: %v", err)
 	}
 
 	return formatted

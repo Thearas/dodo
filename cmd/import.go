@@ -67,7 +67,7 @@ Example:
 		}
 		GlobalConfig.Parallel = min(GlobalConfig.Parallel, len(ImportConfig.table2datafiles))
 
-		logrus.Infof("Import data for %d tables, parallel: %d\n", len(ImportConfig.table2datafiles), GlobalConfig.Parallel)
+		logrus.Infof("Import data for %d tables, parallel: %d", len(ImportConfig.table2datafiles), GlobalConfig.Parallel)
 
 		g := src.ParallelGroup(GlobalConfig.Parallel)
 		for table, datafiles := range ImportConfig.table2datafiles {
@@ -127,7 +127,7 @@ func completeImportConfig() (err error) {
 			dbPrefix := db + "."
 			subdirs, err := os.ReadDir(ImportConfig.Data)
 			if err != nil {
-				logrus.Errorf("Get db '%s' data file under '%s' failed\n", db, filepath.Join(ImportConfig.Data, fmt.Sprintf("%s.*", db)))
+				logrus.Errorf("Get db '%s' data file under '%s' failed", db, filepath.Join(ImportConfig.Data, fmt.Sprintf("%s.*", db)))
 				return err
 			}
 			datadirs := lo.FilterMap(subdirs, func(d os.DirEntry, _ int) (string, bool) {
@@ -157,7 +157,7 @@ func completeImportConfig() (err error) {
 			datadir := filepath.Join(ImportConfig.Data, table, "*")
 			datafiles, err := src.FileGlob([]string{datadir})
 			if err != nil {
-				logrus.Errorf("Get table '%s' data files under '%s' failed\n", table, datadir)
+				logrus.Errorf("Get table '%s' data files under '%s' failed", table, datadir)
 				return err
 			}
 			if len(datafiles) == 0 {

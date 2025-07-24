@@ -211,7 +211,25 @@ Default generation rules for various types:
 
 ### Custom Generation Rules
 
-When generating data, specify the configuration file using `--genconf gendata.yaml`. For a complete example, see [example/gendata.yaml](./example/gendata.yaml).
+Generate data using configuration files specified via `dodo gendata --genconf gendata.yaml`. For a full reference, see [example/gendata.yaml](./example/gendata.yaml).
+
+You can concatenate multiple `gendata.yaml` contents in one file (separated by `---`). It equals to call `dodo gendata --genconf <file>` multiple times. Example:
+
+```yaml
+# Dataset 1
+null_frequency: 0
+type:
+  ...
+tables:
+  ...
+---
+# Dataset 2
+null_frequency: 0.05
+type:
+  ...
+tables:
+  ...
+```
 
 #### Global Rules vs. Table Rules
 
@@ -233,7 +251,7 @@ type:
     max: 2025-06-12
 ```
 
-Example of table-level rules:
+Example of table-level rules, the columns that are not in the table rules will use the global default rules:
 
 ```yaml
 tables:
@@ -447,7 +465,7 @@ columns:
   - name: t_varchar2
     gen:
       type: struct<foo:int, bar:text>
-      # fields: # Optional: Define rules for foo and bar if needed
+      # fields:
       #   - name: foo
       #     gen:
       #       inc: 1
@@ -455,6 +473,8 @@ columns:
 ```
 
 ##### golang
+
+P.s. This feature should be used exclusively as a last resort due to its poor readability – strongly consider using alternative functionality instead.
 
 Uses Go code for a custom generator, supports Go stdlib:
 
