@@ -191,7 +191,7 @@ order by 1,2;
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got, err := LLMGendataConfig(tt.args.ctx, tt.args.apiKey, tt.args.baseURL, "deepseek-reasoner", "每张事实表 1w 行，维度表 100 行", tt.args.tables, tt.args.columnStats, tt.args.sqls)
+			got, err := LLMGendataConfig(tt.args.ctx, tt.args.apiKey, tt.args.baseURL, "deepseek-chat", "每张事实表 1w 行，维度表 100 行", tt.args.tables, tt.args.columnStats, tt.args.sqls)
 			if (err != nil) != tt.wantErr {
 				t.Errorf("LLMGendataConfig() error = %v, wantErr %v", err, tt.wantErr)
 				return
