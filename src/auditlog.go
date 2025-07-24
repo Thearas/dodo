@@ -92,7 +92,7 @@ func ExtractQueriesFromAuditLogs(
 	opts AuditLogScanOpts,
 	parallel int,
 ) (int, error) {
-	logrus.Infof("Extracting queries of database %v, audit logs: %v\n", opts.DBs, auditlogPaths)
+	logrus.Infof("Extracting queries of database %v, audit logs: %v", opts.DBs, auditlogPaths)
 
 	g := ParallelGroup(parallel)
 

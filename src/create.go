@@ -75,7 +75,7 @@ func RunCreateSQL(ctx context.Context, conn *sqlx.DB, db string, sqlFile string,
 		interval := antlr.NewInterval(s.GetStart().GetTokenIndex(), s.GetStop().GetTokenIndex())
 		stmt := p.GetTokenStream().GetTextFromInterval(interval)
 
-		logrus.Tracef("creating schema in db %s, sql: %s\n", db, stmt)
+		logrus.Tracef("creating schema in db %s, sql: %s", db, stmt)
 		if dryrun {
 			return "", nil
 		}
@@ -97,7 +97,7 @@ func RunCreateSQL(ctx context.Context, conn *sqlx.DB, db string, sqlFile string,
 
 		if err != nil {
 			if strings.Contains(err.Error(), " already exists") {
-				logrus.Infof("skip creating %s '%s.%s', already exists\n", schemaType.Lower(), db, name)
+				logrus.Infof("skip creating %s '%s.%s', already exists", schemaType.Lower(), db, name)
 				continue
 			} else if strings.Contains(err.Error(), " does not exist") {
 				// may deppends on other table/view

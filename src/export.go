@@ -73,7 +73,7 @@ func Export(
 		if completed {
 			return nil
 		}
-		logrus.Debugf("Exporting table '%s.%s', progress: %s\n", dbname, table, progress)
+		logrus.Debugf("Exporting table '%s.%s', progress: %s", dbname, table, progress)
 	}
 
 	return fmt.Errorf("export table '%s.%s' timed out after %d seconds", dbname, table, timeout)

@@ -35,6 +35,8 @@ import (
 	"github.com/Thearas/dodo/src/parser"
 )
 
+const MaxGenconfs = 128 // Maximum number of genconf in a genconf YAML file
+
 // GendataConfig holds the configuration values
 var GendataConfig = Gendata{}
 
@@ -79,19 +81,18 @@ Example:
 		}
 		GlobalConfig.Parallel = min(GlobalConfig.Parallel, len(GendataConfig.genFromDDLs))
 
-		logrus.Infof("Generate data for %d table(s), parallel: %d\n", len(GendataConfig.genFromDDLs), GlobalConfig.Parallel)
+		logrus.Infof("Generate data for %d table(s), parallel: %d", len(GendataConfig.genFromDDLs), GlobalConfig.Parallel)
 		if len(GendataConfig.genFromDDLs) == 0 {
 			return nil
 		}
 
-		// 1. Construct table generators
+		// 1. Find ddl and column stats.
 		var (
-			tableGens []*src.TableGen
-			tables    = make([]string, len(GendataConfig.genFromDDLs))
-			statss    = make([]*src.TableStats, len(GendataConfig.genFromDDLs))
+			tables = make([]string, len(GendataConfig.genFromDDLs))
+			statss = make([]*src.TableStats, len(GendataConfig.genFromDDLs))
 		)
 		for i, ddlFile := range GendataConfig.genFromDDLs {
-			logrus.Debugf("generating data to %s ...\n", strings.TrimSuffix(ddlFile, ".table.sql"))
+			logrus.Debugf("generating data to %s ...", strings.TrimSuffix(ddlFile, ".table.sql"))
 
 			ddl, err := src.ReadFileOrStdin(ddlFile)
 			if err != nil {
@@ -104,9 +105,11 @@ Example:
 			tables[i] = ddl
 			statss[i] = stats
 		}
-		// anonymize
+
+		// 2. LLM gen configuration.
+		// anonymize SQLs before sending to LLM
 		query := GendataConfig.Query
-		rawTables := tables
+		origTableDDLs := tables
 		if AnonymizeConfig.Enabled {
 			SetupAnonymizer()
 			tables = lo.Map(tables, func(t string, i int) string { return AnonymizeSQL(GendataConfig.genFromDDLs[i], t) })
@@ -117,7 +120,7 @@ Example:
 		useLLM := GendataConfig.GenConf == "" && GendataConfig.LLM != ""
 		if useLLM {
 			genconfPath := filepath.Join(GlobalConfig.DodoDataDir, "gendata.yaml")
-			logrus.Infof("Generating config '%s' via LLM model: %s, with anonymization: %v\n", genconfPath, GendataConfig.LLM, AnonymizeConfig.Enabled)
+			logrus.Infof("Generating config '%s' via LLM model: %s, with anonymization: %v", genconfPath, GendataConfig.LLM, AnonymizeConfig.Enabled)
 
 			genconf, err := src.LLMGendataConfig(
 				ctx,
@@ -126,7 +129,7 @@ Example:
 				[]string{query},
 			)
 			if err != nil {
-				logrus.Errorf("Failed to create gendata config via LLM %s\n", GendataConfig.LLM)
+				logrus.Errorf("Failed to create gendata config via LLM %s", GendataConfig.LLM)
 				return err
 			}
 
@@ -135,7 +138,7 @@ Example:
 				return err
 			}
 			if err := src.WriteFile(genconfPath, genconf); err != nil {
-				logrus.Errorf("Failed to write gendata config to %s\n", genconfPath)
+				logrus.Errorf("Failed to write gendata config to %s", genconfPath)
 				return err
 			}
 			if !src.Confirm(fmt.Sprintf("Using LLM output config: '%s', please check it before going on", genconfPath)) {
@@ -145,111 +148,8 @@ Example:
 			GendataConfig.GenConf = genconfPath
 		}
 
-		// 2. Setup generator
-		if err := generator.Setup(GendataConfig.GenConf); err != nil {
-			return err
-		}
-		for i, ddlFile := range GendataConfig.genFromDDLs {
-			// set streamload column mapping to the unanonymized version
-			streamloadCols := []string{}
-			if AnonymizeConfig.Enabled {
-				streamloadCols, err = parser.GetTableCols(ddlFile, rawTables[i])
-				if err != nil {
-					return fmt.Errorf("failed to get columns for table %s: %v", rawTables[i], err)
-				}
-			}
-
-			tg, err := src.NewTableGen(ddlFile, tables[i], statss[i], GendataConfig.NumRows, streamloadCols)
-			if err != nil {
-				return err
-			}
-
-			tableGens = append(tableGens, tg)
-		}
-
-		if GlobalConfig.DryRun {
-			return nil
-		} else if len(tableGens) == 0 {
-			logrus.Infoln("No table to generate.")
-			return nil
-		}
-		// store anonymize hash dict
-		if AnonymizeConfig.Enabled {
-			src.StoreMiniHashDict(AnonymizeConfig.Method, AnonymizeConfig.HashDictPath)
-		}
-
-		// 3. Generate data according to table ref dependence
-		var (
-			allTables = lo.Map(tableGens, func(tg *src.TableGen, _ int) string { return tg.Name })
-			refTables = lo.Uniq(lo.Flatten(lo.Map(tableGens, func(tg *src.TableGen, _ int) []string { return slices.Collect(maps.Keys(tg.RefToTable)) })))
-
-			refNotFoundTable = lo.Without(refTables, allTables...)
-		)
-		if len(refNotFoundTable) > 0 {
-			return fmt.Errorf("these tables are being ref, please generate them together: %v", refNotFoundTable)
-		}
-
-		totalTableGens := len(allTables)
-		for range totalTableGens {
-			if len(tableGens) == 0 {
-				return nil
-			}
-
-			zeroRefTableGens := lo.Filter(tableGens, func(tg *src.TableGen, _ int) bool { return len(tg.RefToTable) == 0 })
-			tableGens = lo.Filter(tableGens, func(tg *src.TableGen, _ int) bool { return len(tg.RefToTable) > 0 })
-
-			// check ref deadlock
-			if len(zeroRefTableGens) == 0 {
-				remainTable2Refs := lo.SliceToMap(tableGens, func(tg *src.TableGen) (string, []string) {
-					return tg.Name, slices.Collect(maps.Keys(tg.RefToTable))
-				})
-				return fmt.Errorf("table refs deadlock: %v", remainTable2Refs)
-			}
-
-			// Generate the tables with zero ref.
-			g := src.ParallelGroup(GlobalConfig.Parallel)
-			for _, tg := range zeroRefTableGens {
-				logrus.Infof("Generating data for table: %s, rows: %d\n", tg.Name, tg.Rows)
-				g.Go(func() error {
-					rowsPerFile := min(GendataConfig.RowsPerFile, tg.Rows)
-					for i, end := range lo.RangeWithSteps(0, tg.Rows+rowsPerFile, rowsPerFile) {
-						rows := rowsPerFile
-						if end >= tg.Rows {
-							rows = tg.Rows % rowsPerFile
-						}
-						if rows == 0 {
-							break
-						}
-						o, err := createOutputGenDataWriter(tg.DDLFile, i+1)
-						if err != nil {
-							return err
-						}
-
-						w := bufio.NewWriterSize(o, 256*1024)
-						if err := tg.GenCSV(w, rows); err != nil {
-							_ = o.Close()
-							return err
-						}
-						if err := w.Flush(); err != nil {
-							_ = o.Close()
-							return err
-						}
-						_ = o.Close()
-					}
-					logrus.Infof("Finish generating data for table: %s\n", tg.Name)
-					return nil
-				})
-
-				// the ref table data is generating, remove from all waiting tableGens
-				lo.ForEach(tableGens, func(g *src.TableGen, _ int) { g.RemoveRefTable(tg.Name) })
-			}
-
-			if err := g.Wait(); err != nil {
-				return err
-			}
-		}
-
-		return nil
+		// 3. Run data generation.
+		return MRunGenerateData(origTableDDLs, tables, statss)
 	},
 }
 
@@ -314,7 +214,7 @@ func completeGendataConfig() (err error) {
 			fmatch := filepath.Join(GendataConfig.DDL, fmt.Sprintf("%s.*.table.sql", db))
 			tableddls, err := src.FileGlob([]string{fmatch})
 			if err != nil {
-				logrus.Errorf("Get db '%s' ddls in '%s' failed\n", db, fmatch)
+				logrus.Errorf("Get db '%s' ddls in '%s' failed", db, fmatch)
 				return err
 			}
 			ddls = append(ddls, tableddls...)
@@ -326,6 +226,137 @@ func completeGendataConfig() (err error) {
 		}
 	}
 	GendataConfig.genFromDDLs = ddls
+
+	return nil
+}
+
+func MRunGenerateData(origTableDDLs, anonymizedTables []string, statss []*src.TableStats) (err error) {
+	// may have multi genconf in one genconf YAML file, separate by '---'
+	for i := range MaxGenconfs {
+		if err := RunGenerateData(origTableDDLs, anonymizedTables, statss, i); err != nil {
+			if errors.Is(err, &src.GenconfEndError{}) {
+				return nil
+			}
+			return err
+		}
+		logrus.Infoln("===")
+		logrus.Infof("=== Generation success (round %d) ===", i+1)
+		logrus.Infoln("===")
+	}
+	return nil
+}
+
+func RunGenerateData(origTableDDLs, anonymizedTables []string, statss []*src.TableStats, genconfIdx int) (err error) {
+	// 1. Setup generator
+	genconf := GendataConfig.GenConf
+	if err := generator.Setup(genconf, genconfIdx); err != nil {
+		if !errors.Is(err, &src.GenconfEndError{}) {
+			logrus.Errorf("Failed to read config file '%s': %v", genconf, err)
+		}
+		return err
+	}
+
+	// 2. Construct generator for each table
+	tableGens := make([]*src.TableGen, 0, len(GendataConfig.genFromDDLs))
+	for i, ddlFile := range GendataConfig.genFromDDLs {
+		// set streamload column mapping to the unanonymized version
+		streamloadCols := []string{}
+		if AnonymizeConfig.Enabled {
+			streamloadCols, err = parser.GetTableCols(ddlFile, origTableDDLs[i])
+			if err != nil {
+				return fmt.Errorf("failed to get columns for table %s: %v", origTableDDLs[i], err)
+			}
+		}
+
+		tg, err := src.NewTableGen(ddlFile, anonymizedTables[i], statss[i], GendataConfig.NumRows, streamloadCols)
+		if err != nil {
+			return err
+		}
+
+		tableGens = append(tableGens, tg)
+	}
+
+	if GlobalConfig.DryRun {
+		return nil
+	} else if len(tableGens) == 0 {
+		logrus.Infoln("No table to generate.")
+		return nil
+	}
+	// store anonymize hash dict
+	if AnonymizeConfig.Enabled {
+		src.StoreMiniHashDict(AnonymizeConfig.Method, AnonymizeConfig.HashDictPath)
+	}
+
+	// 3. Generate data according to table ref dependence
+	var (
+		allTables = lo.Map(tableGens, func(tg *src.TableGen, _ int) string { return tg.Name })
+		refTables = lo.Uniq(lo.Flatten(lo.Map(tableGens, func(tg *src.TableGen, _ int) []string { return slices.Collect(maps.Keys(tg.RefToTable)) })))
+
+		refNotFoundTable = lo.Without(refTables, allTables...)
+	)
+	if len(refNotFoundTable) > 0 {
+		return fmt.Errorf("these tables are being ref, please generate them together: %v", refNotFoundTable)
+	}
+
+	totalTableGens := len(allTables)
+	for range totalTableGens {
+		if len(tableGens) == 0 {
+			return nil
+		}
+
+		zeroRefTableGens := lo.Filter(tableGens, func(tg *src.TableGen, _ int) bool { return len(tg.RefToTable) == 0 })
+		tableGens = lo.Filter(tableGens, func(tg *src.TableGen, _ int) bool { return len(tg.RefToTable) > 0 })
+
+		// check ref deadlock
+		if len(zeroRefTableGens) == 0 {
+			remainTable2Refs := lo.SliceToMap(tableGens, func(tg *src.TableGen) (string, []string) {
+				return tg.Name, slices.Collect(maps.Keys(tg.RefToTable))
+			})
+			return fmt.Errorf("table refs deadlock: %v", remainTable2Refs)
+		}
+
+		// Generate the tables with zero ref.
+		g := src.ParallelGroup(GlobalConfig.Parallel)
+		for _, tg := range zeroRefTableGens {
+			logrus.Infof("Generating data for table: %s, rows: %d", tg.Name, tg.Rows)
+			g.Go(func() error {
+				rowsPerFile := min(GendataConfig.RowsPerFile, tg.Rows)
+				for i, end := range lo.RangeWithSteps(0, tg.Rows+rowsPerFile, rowsPerFile) {
+					rows := rowsPerFile
+					if end >= tg.Rows {
+						rows = tg.Rows % rowsPerFile
+					}
+					if rows == 0 {
+						break
+					}
+					o, err := createOutputGenDataWriter(tg.DDLFile, genconfIdx, i)
+					if err != nil {
+						return err
+					}
+
+					w := bufio.NewWriterSize(o, 256*1024)
+					if err := tg.GenCSV(w, rows); err != nil {
+						_ = o.Close()
+						return err
+					}
+					if err := w.Flush(); err != nil {
+						_ = o.Close()
+						return err
+					}
+					_ = o.Close()
+				}
+				logrus.Infof("Finish generating data for table: %s", tg.Name)
+				return nil
+			})
+
+			// the ref table data is generating, remove from all waiting tableGens
+			lo.ForEach(tableGens, func(g *src.TableGen, _ int) { g.RemoveRefTable(tg.Name) })
+		}
+
+		if err := g.Wait(); err != nil {
+			return err
+		}
+	}
 
 	return nil
 }
@@ -344,7 +375,7 @@ func findTableStats(ddlFileName string) (*src.TableStats, error) {
 	b, err := os.ReadFile(dbStatsFile)
 	if err != nil {
 		if errors.Is(err, os.ErrNotExist) {
-			logrus.Debugf("stats file '%s' not found for db '%s'\n", dbStatsFile, db)
+			logrus.Debugf("stats file '%s' not found for db '%s'", dbStatsFile, db)
 			return nil, nil
 		}
 		return nil, err
@@ -360,7 +391,7 @@ func findTableStats(ddlFileName string) (*src.TableStats, error) {
 			continue
 		}
 		if tableStats.Columns[0].Method != "FULL" {
-			logrus.Warnf("Table stats '%s.%s' is '%s' in '%s', better to dump with '--analyze' or run 'ANALYZE DATABASE `%s` WITH SYNC' before dumping\n",
+			logrus.Warnf("Table stats '%s.%s' is '%s' in '%s', better to dump with '--analyze' or run 'ANALYZE DATABASE `%s` WITH SYNC' before dumping",
 				db, table,
 				tableStats.Columns[0].Method,
 				dbStatsFile,
@@ -370,7 +401,7 @@ func findTableStats(ddlFileName string) (*src.TableStats, error) {
 		return tableStats, nil
 	}
 
-	logrus.Warnf("Table stats '%s.%s' not found in '%s', better to dump with '--analyze' or run 'ANALYZE DATABASE `%s` WITH SYNC' before dumping\n",
+	logrus.Warnf("Table stats '%s.%s' not found in '%s', better to dump with '--analyze' or run 'ANALYZE DATABASE `%s` WITH SYNC' before dumping",
 		db, table,
 		dbStatsFile,
 		db,
@@ -378,24 +409,27 @@ func findTableStats(ddlFileName string) (*src.TableStats, error) {
 	return nil, nil
 }
 
-func createOutputGenDataWriter(ddlFileName string, idx int) (*os.File, error) {
-	ddlFileName = filepath.Base(ddlFileName)
-	dir := filepath.Join(GendataConfig.OutputDataDir, strings.TrimSuffix(strings.TrimSuffix(ddlFileName, ".table.sql"), ".sql"))
-	if idx == 1 {
-		// delete previous gen files
-		logrus.Debugf("Deleting previous generated data files in %s\n", dir)
+func createOutputGenDataWriter(ddlFileName string, confIdx, datafileIdx int) (*os.File, error) {
+	dir := tableGenDataDir(ddlFileName)
+	if confIdx == 0 && datafileIdx == 0 {
+		// drop previous data dir
 		if err := os.RemoveAll(dir); err != nil {
 			return nil, err
 		}
-		if err := os.MkdirAll(dir, 0755); err != nil {
-			return nil, err
-		}
+	}
+	if err := os.MkdirAll(dir, 0755); err != nil {
+		return nil, fmt.Errorf("failed to create output data dir '%s': %w", dir, err)
 	}
 
-	file := filepath.Join(dir, fmt.Sprintf("%d.csv", idx))
+	file := filepath.Join(dir, fmt.Sprintf("%d_%d.csv", confIdx+1, datafileIdx+1))
 	f, err := os.OpenFile(file, os.O_RDWR|os.O_CREATE|os.O_TRUNC, 0600)
 	if err != nil {
-		logrus.Fatalln("Can not open output data file:", file, ", err:", err)
+		return nil, fmt.Errorf("can not open output data file: %s, err: %w", file, err)
 	}
 	return f, nil
+}
+
+func tableGenDataDir(ddlFilePath string) string {
+	ddlFileName := filepath.Base(ddlFilePath)
+	return filepath.Join(GendataConfig.OutputDataDir, strings.TrimSuffix(strings.TrimSuffix(ddlFileName, ".table.sql"), ".sql"))
 }

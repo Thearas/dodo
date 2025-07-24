@@ -93,7 +93,7 @@ func (l *ErrListener) SyntaxError(_ antlr.Recognizer, _ any, line, column int, m
 	// remove string after 'expecting', it's too annoying
 	msg := strings.Split(message, "expecting")[0]
 	l.LastErr = errors.New(msg)
-	logrus.Errorf("sql %s parse error at line %d:%d %s\n", l.sqlId, line, column, msg)
+	logrus.Errorf("sql %s parse error at line %d:%d %s", l.sqlId, line, column, msg)
 }
 
 type listener struct {

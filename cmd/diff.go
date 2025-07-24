@@ -124,7 +124,7 @@ func diffDumpSQL(replay string) error {
 		client := strings.TrimSuffix(filepath.Base(path2), src.ReplayResultFileExt)
 		clientsqls, ok := client2sqls[client]
 		if !ok {
-			logrus.Errorf("client %s not found in original dump sql, skipping\n", client)
+			logrus.Errorf("client %s not found in original dump sql, skipping", client)
 			return nil
 		}
 
@@ -135,11 +135,11 @@ func diffDumpSQL(replay string) error {
 		defer f2.Close()
 		scan2 := bufio.NewScanner(f2)
 
-		logrus.Debugf("diffing %s:\n", path2)
+		logrus.Debugf("diffing %s:", path2)
 
 		id2sqls := lo.SliceToMap(clientsqls, func(s *src.ReplaySql) (string, *src.ReplaySql) { return s.QueryId, s })
 		if err := diff(&diffReader{id2sqls: id2sqls}, &diffReader{scan: scan2}); err != nil {
-			logrus.Errorf("diff %s failed, err: %v\n", path2, err)
+			logrus.Errorf("diff %s failed, err: %v", path2, err)
 		}
 		return nil
 	})
@@ -217,10 +217,10 @@ func diffTwoReplays(replay1, replay2 string) error {
 		defer f2.Close()
 		scan2 := bufio.NewScanner(f2)
 
-		logrus.Debugf("diffing %s and %s\n", path1, path2)
+		logrus.Debugf("diffing %s and %s", path1, path2)
 
 		if err := diff(&diffReader{scan: scan1}, &diffReader{scan: scan2}); err != nil {
-			logrus.Errorf("diff %s and %s failed, err: %v\n", path1, path2, err)
+			logrus.Errorf("diff %s and %s failed, err: %v", path1, path2, err)
 		}
 		return nil
 	})
@@ -248,7 +248,7 @@ func diff(scan1, scan2 *diffReader) error {
 
 	// print diff result
 	for id, diffmsg := range id2diff {
-		fmt.Printf("QueryId: %s, %s\n", color.CyanString(id), diffmsg)
+		fmt.Printf("QueryId: %s, %s", color.CyanString(id), diffmsg)
 		if len(scan1.id2sqls) > 0 {
 			if s, ok := scan1.id2sqls[id]; ok {
 				fmt.Printf("Stmt: %s", s.Stmt)
@@ -279,7 +279,7 @@ func (r *diffReader) get(queryId string) *src.ReplayResult {
 		}
 		result := &src.ReplayResult{}
 		if err := json.Unmarshal(b, result); err != nil {
-			logrus.Errorf("unmarshal %s failed, err: %v\n", r.scan.Text(), err)
+			logrus.Errorf("unmarshal %s failed, err: %v", r.scan.Text(), err)
 			return nil
 		}
 		return result

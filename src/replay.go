@@ -104,7 +104,7 @@ func (c *ReplayClient) conn(ctx context.Context, currdb string, reconnect ...boo
 			clusterId = fmt.Sprintf("@`%s`", c.cluster)
 		}
 		if _, err := c.connect.ExecContext(ctx, fmt.Sprintf("use `%s`%s", currdb, clusterId)); err != nil {
-			logrus.Errorf("client %s switching to db %s failed, err: %v\n", c.client, currdb, err)
+			logrus.Errorf("client %s switching to db %s failed, err: %v", c.client, currdb, err)
 			return nil, err
 		}
 		logrus.Traceln("switching to db", currdb)
@@ -151,7 +151,7 @@ func (c *ReplayClient) writeResult(b []byte) (err error) {
 		resultFilePath := filepath.Join(c.resultDir, fmt.Sprintf("%s%s", c.client, ReplayResultFileExt))
 		c.resultFile, err = os.OpenFile(resultFilePath, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0600)
 		if err != nil {
-			logrus.Errorf("open replay result file %s failed, err: %v\n", resultFilePath, err)
+			logrus.Errorf("open replay result file %s failed, err: %v", resultFilePath, err)
 			return err
 		}
 	}
@@ -215,7 +215,7 @@ func (c *ReplayClient) consumeHash() string {
 }
 
 func (c *ReplayClient) replay(ctx context.Context) error {
-	logrus.Debugf("replay %d sqls for client %s\n", len(c.sqls), c.client)
+	logrus.Debugf("replay %d sqls for client %s", len(c.sqls), c.client)
 
 	var (
 		prevTs         = c.minTs
@@ -248,13 +248,13 @@ func (c *ReplayClient) replay(ctx context.Context) error {
 		)
 		r, durationMs, err := c.queryWithReconnect(ctx, s.Db, s.Stmt)
 		if err != nil {
-			logrus.Debugf("client %s executed sql failed at query_id: %s, err: %v\n", c.client, s.QueryId, err)
+			logrus.Debugf("client %s executed sql failed at query_id: %s, err: %v", c.client, s.QueryId, err)
 		} else {
 			for r.Next() {
 				rowCount++
 				if rowCount < c.maxHashRows {
 					if err = c.appendHash(r); err != nil {
-						logrus.Errorf("scan sql return rows failed, query_id: %s, err: %v\n", s.QueryId, err)
+						logrus.Errorf("scan sql return rows failed, query_id: %s, err: %v", s.QueryId, err)
 						break
 					}
 				}
@@ -290,7 +290,7 @@ func (c *ReplayClient) replay(ctx context.Context) error {
 		}
 	}
 
-	logrus.Debugf("client %s replay done\n", c.client)
+	logrus.Debugf("client %s replay done", c.client)
 
 	return nil
 }
@@ -312,7 +312,7 @@ func ReplaySqls(
 		parallel = len(clientSqls)
 	}
 
-	logrus.Infof("Replay with %d client, parallel %d, started at %v, speed %f\n",
+	logrus.Infof("Replay with %d client, parallel %d, started at %v, speed %f",
 		len(clientSqls),
 		parallel,
 		time.UnixMilli(minTs).UTC().Format("2006-01-02 15:04:05"),

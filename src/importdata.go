@@ -21,7 +21,7 @@ const (
 func StreamLoad(ctx context.Context, host, httpPort, user, password, db, table, file, fileProgress string, dryrun bool) error {
 	f, err := os.Open(file)
 	if err != nil {
-		logrus.Errorf("Open data file '%s' failed\n", file)
+		logrus.Errorf("Open data file '%s' failed", file)
 		return err
 	}
 	r := bufio.NewReader(f)
@@ -47,7 +47,7 @@ func StreamLoad(ctx context.Context, host, httpPort, user, password, db, table, 
 	curl += fmt.Sprintf(" -T '%s'", file)
 
 	sanitizedCurl := strings.Replace(curl, userpass, fmt.Sprintf("%s:****", user), 1)
-	logrus.Infof("Stream load %s.%s (%s)\n", db, table, fileProgress)
+	logrus.Infof("Stream load %s.%s (%s)", db, table, fileProgress)
 	logrus.Debugln(sanitizedCurl)
 
 	if dryrun {
@@ -68,7 +68,7 @@ func StreamLoad(ctx context.Context, host, httpPort, user, password, db, table, 
 
 	result := make(map[string]any)
 	if err_ := json.Unmarshal(stdout, &result); err_ != nil {
-		logrus.Errorf("Stream load get result failed for '%s.%s' at data file '%s'\n", db, table, file)
+		logrus.Errorf("Stream load get result failed for '%s.%s' at data file '%s'", db, table, file)
 		return errors.New("stream load failed")
 	}
 	if status, ok := result["Status"]; !ok || status.(string) != "Success" {
@@ -80,7 +80,7 @@ func StreamLoad(ctx context.Context, host, httpPort, user, password, db, table, 
 			msg = result["data"]
 		}
 		details := result["ErrorURL"]
-		logrus.Errorf("Stream load failed for '%s.%s' at data file '%s', message: %v, details: %v\n", db, table, file, msg, details)
+		logrus.Errorf("Stream load failed for '%s.%s' at data file '%s', message: %v, details: %v", db, table, file, msg, details)
 		return errors.New("stream load failed")
 	}
 

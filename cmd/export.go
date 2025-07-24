@@ -68,7 +68,7 @@ Example:
 		}
 		GlobalConfig.Parallel = min(GlobalConfig.Parallel, len(GlobalConfig.Tables))
 
-		logrus.Infof("Export data for %d table(s) to '%s', parallel: %d\n", len(GlobalConfig.Tables), ExportConfig.ToURL, GlobalConfig.Parallel)
+		logrus.Infof("Export data for %d table(s) to '%s', parallel: %d", len(GlobalConfig.Tables), ExportConfig.ToURL, GlobalConfig.Parallel)
 		if len(GlobalConfig.Tables) == 0 {
 			return nil
 		}

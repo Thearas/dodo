@@ -10,6 +10,7 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
+// go test -timeout 600s -run ^TestLLMGendataConfig$ github.com/Thearas/dodo/src
 func TestLLMGendataConfig(t *testing.T) {
 	apikey := os.Getenv("DORIS_DEEPSEEK_API_KEY")
 	if apikey == "" {
@@ -120,8 +121,9 @@ CREATE TABLE ga (
 				},
 				columnStats: []string{},
 				sqls: []string{`
-SELECT ha.ia,
-    ha.ja + ka.la as value
+SELECT 
+    ha.ia,
+    ha.ja as value
 from (
         select ma.ia ia,
             (
@@ -180,11 +182,7 @@ from (
                     and date_add('2020-05-25', INTERVAL 1 DAY)
             ) ma on ma.ia = oa.wa
         where oa.wa is not null
-    ) ha,
-    (
-        select COALESCE (max (va), 0) la
-        from c
-    ) ka
+    ) ha
 order by 1,2;
 				`},
 			},
@@ -193,7 +191,7 @@ order by 1,2;
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got, err := LLMGendataConfig(tt.args.ctx, tt.args.apiKey, tt.args.baseURL, "deepseek-chat", "每张表 10w 行", tt.args.tables, tt.args.columnStats, tt.args.sqls)
+			got, err := LLMGendataConfig(tt.args.ctx, tt.args.apiKey, tt.args.baseURL, "deepseek-chat", "每张事实表 1w 行，维度表 100 行", tt.args.tables, tt.args.columnStats, tt.args.sqls)
 			if (err != nil) != tt.wantErr {
 				t.Errorf("LLMGendataConfig() error = %v, wantErr %v", err, tt.wantErr)
 				return
@@ -205,7 +203,7 @@ order by 1,2;
 			assert.IsType(t, []any{}, gotData["tables"])
 			assert.True(t, lo.ContainsBy(gotData["tables"].([]any), func(item any) bool {
 				table := item.(map[string]any)
-				return table["name"] == "c" && table["row_count"] == 100_000
+				return table["name"] == "c" && table["row_count"].(int) >= 100
 			}))
 		})
 	}

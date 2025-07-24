@@ -59,7 +59,7 @@ Example:
 		}
 		GlobalConfig.Parallel = min(GlobalConfig.Parallel, len(createTableDDLs))
 
-		logrus.Infof("Create %d table(s) and %d view(s), parallel: %d\n", len(createTableDDLs), len(createOtherDDLs), GlobalConfig.Parallel)
+		logrus.Infof("Create %d table(s) and %d view(s), parallel: %d", len(createTableDDLs), len(createOtherDDLs), GlobalConfig.Parallel)
 
 		db, err := connectDBWithoutDBName()
 		if err != nil {
@@ -174,7 +174,7 @@ func completeCreateConfig() (err error) {
 			fmatch := filepath.Join(ddldir, fmt.Sprintf("%s.*.table.sql", db))
 			tableddls, err := src.FileGlob([]string{fmatch})
 			if err != nil {
-				logrus.Errorf("Get db '%s' ddls in '%s' failed\n", db, fmatch)
+				logrus.Errorf("Get db '%s' ddls in '%s' failed", db, fmatch)
 				return err
 			}
 			createTableDDLs = append(createTableDDLs, tableddls...)
@@ -182,7 +182,7 @@ func completeCreateConfig() (err error) {
 			fmatch = filepath.Join(ddldir, fmt.Sprintf("%s.*view.sql", db))
 			viewddls, err := src.FileGlob([]string{fmatch})
 			if err != nil {
-				logrus.Errorf("Get db '%s' ddls in '%s' failed\n", db, fmatch)
+				logrus.Errorf("Get db '%s' ddls in '%s' failed", db, fmatch)
 				return err
 			}
 			createOtherDDLs = append(createOtherDDLs, viewddls...)

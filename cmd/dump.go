@@ -112,7 +112,7 @@ or environment variables with prefix 'DORIS_', e.g.
 				return err
 			}
 
-			logrus.Infof("Found %d schema(s)\n", lo.SumBy(schemas, func(s *src.DBSchema) int { return len(s.Schemas) }))
+			logrus.Infof("Found %d schema(s)", lo.SumBy(schemas, func(s *src.DBSchema) int { return len(s.Schemas) }))
 
 			if err := outputSchemas(schemas); err != nil {
 				return err
@@ -126,7 +126,7 @@ or environment variables with prefix 'DORIS_', e.g.
 				return err
 			}
 
-			logrus.Infof("Found %d query(s)\n", count)
+			logrus.Infof("Found %d query(s)", count)
 		}
 
 		// store anonymize hash dict
@@ -240,7 +240,7 @@ func dumpSchemas(ctx context.Context) ([]*src.DBSchema, error) {
 	schemas := make([]*src.DBSchema, len(dbs))
 	for i, db := range dbs {
 		g.Go(func() error {
-			logrus.Infof("Dumping schemas from %s...\n", db)
+			logrus.Infof("Dumping schemas from %s...", db)
 			conn, err := connectDB(db)
 			if err != nil {
 				return err
@@ -382,14 +382,14 @@ func dumpQueriesFromTable(ctx context.Context, opts src.AuditLogScanOpts) (int, 
 		return 0, err
 	}
 
-	logrus.Infof("Dumping queries from audit log table '%s'...\n", DumpConfig.AuditLogTable)
+	logrus.Infof("Dumping queries from audit log table '%s'...", DumpConfig.AuditLogTable)
 
 	w := NewQueryWriter(1, 0)
 	defer w.Close()
 
 	count, err := src.GetDBAuditLogs(ctx, w, db, dbname, table, opts, GlobalConfig.Parallel)
 	if err != nil {
-		logrus.Errorf("Extract queries from audit logs table failed, %v\n", err)
+		logrus.Errorf("Extract queries from audit logs table failed, %v", err)
 		return 0, err
 	}
 
@@ -451,7 +451,7 @@ func dumpQueriesFromFile(ctx context.Context, opts src.AuditLogScanOpts) (int, e
 		GlobalConfig.Parallel,
 	)
 	if err != nil {
-		logrus.Errorf("Extract queries from audit logs file failed, %v\n", err)
+		logrus.Errorf("Extract queries from audit logs file failed, %v", err)
 		return 0, err
 	}
 

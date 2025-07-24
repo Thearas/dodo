@@ -74,9 +74,9 @@ func ScpFromRemote(ctx context.Context, privKey, remoteUrl, localPath string) er
 	}
 
 	if logrus.GetLevel() < logrus.DebugLevel {
-		logrus.Infof("downloading %s to %s\n", remotePath, localPath)
+		logrus.Infof("downloading %s to %s", remotePath, localPath)
 	} else {
-		logrus.Infof("downloading %s@%s%s to %s\n", user, host, remotePath, localPath)
+		logrus.Infof("downloading %s@%s%s to %s", user, host, remotePath, localPath)
 	}
 
 	// Create a new SCP client
@@ -108,7 +108,7 @@ func ScpFromRemote(ctx context.Context, privKey, remoteUrl, localPath string) er
 
 	err = client.CopyFromRemote(ctx, f, remotePath)
 	if err != nil {
-		logrus.Errorf("Error while copying file from host %s, err: %v\n", host, err)
+		logrus.Errorf("Error while copying file from host %s, err: %v", host, err)
 		return err
 	}
 

@@ -17,9 +17,9 @@
     - [format](#format)
     - [gen](#gen)
       - [inc](#inc)
+      - [ref](#ref)
       - [enum](#enum)
       - [parts](#parts)
-      - [ref](#ref)
       - [type](#type)
       - [golang](#golang)
     - [Complex Types](#complex-types-maparraystructjsonvariant)
@@ -106,7 +106,7 @@ output
 ### Other Dump Parameters
 
 - `--analyze`: Automatically runs `ANALYZE TABLE <table> WITH SYNC` before dumping a table to make statistics more accurate. Default is off.
-- `--parallel`: Controls the dump concurrency. Increasing it speeds up the dump; decreasing it uses fewer resources. Default is `min(machine_cores, 10)`.
+- `--parallel`: Controls the dump concurrency. Increasing it speeds up the dump; decreasing it uses fewer resources. Default is `min(machine_cores-2, 10)`.
 - `--dump-stats`: Also dumps table statistics when dumping tables. Statistics are dump to `output/ddl/db.stats.yaml`. Default is on.
 - `--only-select`: Whether to dump only `SELECT` statements. Default is on.
 - `--from` and `--to`: Dump SQL within a specified time range.
@@ -183,7 +183,8 @@ In implementation, the tool performs these actions in two stages based on the `-
 
 ### Default Generation Rules
 
-By default, `NULL` values are not generated. This can be changed by specifying `null_frequency` in [Custom Generation Rules](#custom-generation-rules).
+- By default, `NULL` values are not generated. This can be changed by specifying `null_frequency` in [Custom Generation Rules](#custom-generation-rules)
+- Remember that the `string/text/varchar/char` letter is randomly generated, unpredictable, the charset is alphanumeric (a-z, A-Z, 0-9)
 
 Default generation rules for various types:
 
@@ -207,11 +208,27 @@ Default generation rules for various types:
 | DATE |  | 10 years ago - now |  |
 | DATETIME |  | 10 years ago - now |  |
 
-- The `string` type letter is randomly generated, and the charset is alphanumeric (a-z, A-Z, 0-9)
-
 ### Custom Generation Rules
 
-When generating data, specify the configuration file using `--genconf gendata.yaml`. For a complete example, see [example/gendata.yaml](./example/gendata.yaml).
+Generate data using configuration files specified via `dodo gendata --genconf gendata.yaml`. For a full reference, see [example/gendata.yaml](./example/gendata.yaml).
+
+You can concatenate multiple `gendata.yaml` contents in one file (separated by `---`). It equals to call `dodo gendata --genconf <file>` multiple times. Example:
+
+```yaml
+# Dataset 1
+null_frequency: 0
+type:
+  ...
+tables:
+  ...
+---
+# Dataset 2
+null_frequency: 0.05
+type:
+  ...
+tables:
+  ...
+```
 
 #### Global Rules vs. Table Rules
 
@@ -233,7 +250,7 @@ type:
     max: 2025-06-12
 ```
 
-Example of table-level rules:
+Example of table-level rules, the columns that are not in the table rules will use the global default rules:
 
 ```yaml
 tables:
@@ -339,69 +356,10 @@ columns:
       start: 100  # Starts from 100 (default 1)
 ```
 
-##### enum
-
-Enum generator (aka. `enums`), randomly selects from given values, values can be literals or generators (the type will be inferred from parent generator). There is an optional config `weights` (can only be used with `enum`):
-
-```yaml
-columns:
-  - name: t_null_string
-    gen:
-      enum: [foo, bar, foobar]
-      weights: [0.2, 0.6, 0.2]  # Optional, specifies the probability of each value being selected
-
-  - name: t_str
-    gen:
-      # randomly choose one literal or generators to generate value, each has 25% probability
-      enum:
-        - "123"
-        - length: {min: 5, max: 10}
-        - format: "my name is {{username}}"
-        - gen:
-            enum: [1, 2, 3]
-
-  - name: t_json
-    gen:
-      # randomly choose one structure, each has 50% probability
-      enum:
-        - structure: struct<foo:int>
-        - structure: array<string>
-```
-
-##### parts
-
-Must be used together with [`format`](#format). Flexibly combine multiple values ​​to produce the final result.
-
-`parts` generates multiple values ​​at a time and fills them into `{{%xxx}}` of [`format`](#format) in order. The value of each part can be a literal or a generator(the type will be inferred from parent generator):
-
-```yaml
-columns:
-  - name: date1 # date
-    format: "{{year}}-{{%02d}}-{{%02d}}"
-    gen:
-      parts:
-        - gen: # month
-            type: int
-            min: 1
-            max: 12
-        - gen: # day
-            type: int
-            min: 1
-            max: 20
-
-  - name: t_null_char # char(10)
-    format: "{{%s}}--{{%02d}}" # parts must be used with format
-    gen:
-      parts:
-        - "prefix"
-        - gen:
-            enum: [2, 4, 6, 8, 10]
-```
-
 ##### ref
 
 Reference generator, randomly uses values from other `table.column`.
-Typically used for relational columns, like `t1 JOIN t2 ON t1.c1 = t2.c1` or `WHERE t1.c1 = t2.c1`:
+Typically used for columns from different tables but has the same values, like relational columns `t1 JOIN t2 ON t1.c1 = t2.c1` or `WHERE t1.c1 = t2.c1`:
 
 ```yaml
 columns:
@@ -415,7 +373,7 @@ columns:
     fields:
       - name: dp_id
         gen:
-          ref: employees.department_id
+          ref: employees.department_id # ref can be used in nested rules
       - name: name
         gen:
           ref: employees.name
@@ -425,6 +383,65 @@ columns:
 >
 > - The source tables that be referenced to must be generated together
 > - The references must not have deadlock
+
+##### enum
+
+Enum generator (aka. `enums`), randomly selects from given values, values can be literals or generators (the type will be inferred from parent generator). There is an optional config `weights` (can only be used with `enum`):
+
+```yaml
+columns:
+  - name: t_null_string
+    gen:
+      enum: [foo, bar, foobar]
+      weights: [0.2, 0.6, 0.2]  # Optional, specifies the probability of each value being selected
+
+  - name: t_str
+    gen:
+      # randomly choose one literal or generators to generate value, each has 20% probability
+      enum:
+        - "123"
+        - length: {min: 5, max: 10}
+        - format: "my name is {{username}}"
+        - gen:
+            ref: t1.c1
+        - gen:
+            enum: [1, 2, 3]
+
+  - name: t_json
+    gen:
+      # randomly choose one structure, each has 50% probability
+      enum:
+        - structure: struct<foo:int>
+        - structure: array<string>
+```
+
+##### parts
+
+Must be used together with [`format`](#format). Flexibly combine multiple values ​to produce the final result.
+
+`parts` generates multiple values ​at a time and fills them into `{{%xxx}}` of [`format`](#format) in order. The value of each part can be a literal or a generator(the type will be inferred from parent generator):
+
+```yaml
+columns:
+  - name: date1 # date
+    format: "{{year}}-{{%02d}}-{{%02d}}"
+    gen:
+      parts:
+        - gen: # month
+            type: int
+            min: 1
+            max: 12
+        - gen: # day
+            ref: table1.column1
+
+  - name: t_null_char # char(10)
+    format: "{{%s}}--{{%02d}}" # parts must be used with format
+    gen:
+      parts:
+        - "prefix"
+        - gen:
+            enum: [2, 4, 6, 8, 10]
+```
 
 ##### type
 
@@ -447,14 +464,11 @@ columns:
   - name: t_varchar2
     gen:
       type: struct<foo:int, bar:text>
-      # fields: # Optional: Define rules for foo and bar if needed
-      #   - name: foo
-      #     gen:
-      #       inc: 1
-      #       start: 1000
 ```
 
 ##### golang
+
+P.s. This feature should be used exclusively as a last resort due to its poor readability - strongly consider using alternative functionality instead.
 
 Uses Go code for a custom generator, supports Go stdlib:
 

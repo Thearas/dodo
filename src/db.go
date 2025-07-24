@@ -366,7 +366,7 @@ func GetTablesStats(ctx context.Context, conn *sqlx.DB, analyze bool, dbname str
 
 		s, err := getTableStats(ctx, conn, dbname, table)
 		if err != nil {
-			logrus.Errorf("get table stats failed: db: %s, table: %s, err: %v\n", dbname, table, err)
+			logrus.Errorf("get table stats failed: db: %s, table: %s, err: %v", dbname, table, err)
 			return nil, err
 		}
 		if s == nil {
@@ -379,11 +379,11 @@ func GetTablesStats(ctx context.Context, conn *sqlx.DB, analyze bool, dbname str
 }
 
 func analyzeTableSync(ctx context.Context, conn *sqlx.DB, dbname, table string) {
-	logrus.Debugf("analyzing table `%s`.`%s` with sync\n", dbname, table)
+	logrus.Debugf("analyzing table `%s`.`%s` with sync", dbname, table)
 
 	r, err := conn.QueryxContext(ctx, InternalSqlComment+fmt.Sprintf("ANALYZE TABLE `%s`.`%s` WITH SYNC", dbname, table))
 	if err != nil {
-		logrus.Errorf("Analyze table `%s`.`%s` failed, err: %v\n", dbname, table, err)
+		logrus.Errorf("Analyze table `%s`.`%s` failed, err: %v", dbname, table, err)
 	}
 	defer r.Close()
 }
@@ -432,7 +432,7 @@ func getTableStats(ctx context.Context, conn *sqlx.DB, dbname, table string) (*T
 		return nil, err
 	}
 	if len(cols) == 0 {
-		logrus.Warnf("no column stats found for %s.%s\n", dbname, table)
+		logrus.Warnf("no column stats found for %s.%s", dbname, table)
 		return nil, nil
 	}
 
@@ -483,7 +483,7 @@ func GetDBAuditLogs(
 		}
 	}
 
-	logrus.Debugf("need to scan %d audit log row(s)\n", total)
+	logrus.Debugf("need to scan %d audit log row(s)", total)
 
 	if parallel > total {
 		parallel = total
@@ -591,7 +591,7 @@ func getDBAuditLogsWithConds(
 		var r *sqlx.Rows
 		r, err = db.QueryxContext(ctx, InternalSqlComment+stmt)
 		if err != nil {
-			logrus.Errorf("query audit log table failed: retry: %d, db: %s, table: %s, err: %v\n", retry, dbname, table, err)
+			logrus.Errorf("query audit log table failed: retry: %d, db: %s, table: %s, err: %v", retry, dbname, table, err)
 			continue
 		}
 		defer r.Close() //nolint:revive
@@ -610,7 +610,7 @@ func getDBAuditLogsWithConds(
 
 			vals, err = cast.ToStringSliceE(vals_)
 			if err != nil {
-				logrus.Errorf("read audit log table failed: db: %s, table: %s, err: %v\n", dbname, table, err)
+				logrus.Errorf("read audit log table failed: db: %s, table: %s, err: %v", dbname, table, err)
 				break
 			}
 			lastTime, lastQueryId = vals[0], vals[5]

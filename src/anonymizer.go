@@ -45,13 +45,13 @@ func SetupAnonymizer(method, hashdictPath string, idMinLength int, reserveIds ..
 	if method == "minihash" {
 		b, err := os.OpenFile(hashdictPath, os.O_RDONLY|os.O_CREATE, 0600)
 		if err != nil {
-			logrus.Fatalf("Failed to read hash dict file %s, err: %v\n", hashdictPath, err)
+			logrus.Fatalf("Failed to read hash dict file %s, err: %v", hashdictPath, err)
 		}
 		defer b.Close()
 
 		miniDict = make(map[string]string)
 		if err = yaml.NewDecoder(b).Decode(&miniDict); err != nil && err != io.EOF {
-			logrus.Fatalf("Failed to decode hash dict file %s, err: %v\n", hashdictPath, err)
+			logrus.Fatalf("Failed to decode hash dict file %s, err: %v", hashdictPath, err)
 		}
 
 		parser.DorisLexerInit()
@@ -70,19 +70,19 @@ func StoreMiniHashDict(method, hashdictPath string) {
 	newPath := hashdictPath + ".new"
 	b, err := os.OpenFile(newPath, os.O_WRONLY|os.O_CREATE, 0600)
 	if err != nil {
-		logrus.Errorf("Failed to store hash dict file, err: %v\n", err)
+		logrus.Errorf("Failed to store hash dict file, err: %v", err)
 		return
 	}
 
 	if err = yaml.NewEncoder(b).Encode(miniDict); err != nil {
 		_ = b.Close()
-		logrus.Errorf("Failed to encode hash dict file, err: %v\n", err)
+		logrus.Errorf("Failed to encode hash dict file, err: %v", err)
 		return
 	}
 	_ = b.Close()
 
 	if err = os.Rename(newPath, hashdictPath); err != nil {
-		logrus.Errorf("Failed to replace hash dict file, err: %v\n", err)
+		logrus.Errorf("Failed to replace hash dict file, err: %v", err)
 	}
 }
 
@@ -147,7 +147,7 @@ func getAnonymizeFunc(method string) func(string) string {
 	case "minihash":
 		return minihashF
 	default:
-		logrus.Warnf("Anonymization method %s is not supported, keep going with no anonymization\n", method)
+		logrus.Warnf("Anonymization method %s is not supported, keep going with no anonymization", method)
 		return nil
 	}
 }

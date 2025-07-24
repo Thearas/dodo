@@ -144,7 +144,7 @@ func replay(ctx context.Context) error {
 	buf := bufio.NewScanner(f)
 	buf.Buffer(make([]byte, 0, 10*1024*1024), 10*1024*1024)
 
-	logrus.Debugf("replay file %s with filter, db: %v, user: %v, from: %s, to: %s\n",
+	logrus.Debugf("replay file %s with filter, db: %v, user: %v, from: %s, to: %s",
 		ReplayConfig.ReplayFile,
 		ReplayConfig.DBs,
 		ReplayConfig.Users,

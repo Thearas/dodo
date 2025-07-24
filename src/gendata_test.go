@@ -12,7 +12,7 @@ import (
 )
 
 func init() {
-	generator.Setup("")
+	generator.Setup("", 0)
 }
 
 func TestGendata(t *testing.T) {

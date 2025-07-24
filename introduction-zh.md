@@ -17,9 +17,9 @@
     - [format](#format)
     - [gen](#gen)
       - [inc](#inc)
+      - [ref](#ref)
       - [enum](#enum)
       - [parts](#parts)
-      - [ref](#ref)
       - [type](#type)
       - [golang](#golang)
     - [复杂类型](#复杂类型-maparraystructjsonvariant)
@@ -106,7 +106,7 @@ output
 ### 其他导出参数
 
 - `--analyze` 导出表前自动跑 `ANALYZE TABLE <table> WITH SYNC`，使统计信息更准确，默认关闭
-- `--parallel` 控制导出并发量，调大导出更快，调小占用资源更少，默认 `min(机器核数, 10)`
+- `--parallel` 控制导出并发量，调大导出更快，调小占用资源更少，默认 `min(机器核数-2, 10)`
 - `--dump-stats` 导出表时也导出统计信息，导出在 `output/ddl/db.stats.yaml` 文件，默认开启
 - `--only-select` 是否从只导出 `SELECT` 语句，默认开启
 - `--from` 和 `--to` 导出时间范围内的 SQL
@@ -180,7 +180,8 @@ dodo import --tables db1.table1 --data 'my_table/*.csv'
 
 ### 默认的生成规则
 
-默认不生成 `NULL`，可以在[自定义生成规则](#自定义生成规则)中指定 `null_frequency` 更改。
+- 默认不生成 `NULL`，可以在[自定义生成规则](#自定义生成规则)中指定 `null_frequency` 更改
+- 注意字符串类型是随机生成、不可预测的，字符集是大小写字母 + 数字 (a-z, A-Z, 0-9)
 
 各类型的默认生成规则：
 
@@ -204,11 +205,27 @@ dodo import --tables db1.table1 --data 'my_table/*.csv'
 | DATE |  | 10 years ago - now |  |
 | DATETIME |  | 10 years ago - now |  |
 
-- 字符串类型是随机生成的，字符集是大小写字母 + 数字 (a-z, A-Z, 0-9)
-
 ### 自定义生成规则
 
 生成数据时用 `--genconf gendata.yaml` 指定，完整示例见 [example/gendata.yaml](./example/gendata.yaml)。
+
+你可以将多个 `gendata.yaml` 内容合并到一个文件中（以 `---` 分隔）。这相当于多次调用 `dodo gendata --genconf <file>`。例如：
+
+```yaml
+# Dataset 1
+null_frequency: 0
+type:
+...
+tables:
+...
+---
+# Dataset 2
+null_frequency: 0.05
+type:
+...
+tables:
+...
+```
 
 #### 全局规则与表规则
 
@@ -335,6 +352,34 @@ columns:
       start: 100  # 从 100 开始（默认 1）
 ```
 
+##### ref
+
+引用生成器，随机使用其他表的列的值。
+一般在用于关系列之间，比如 `t1 JOIN t2 ON t1.c1 = t2.c1` 或 `WHERE t1.c1 = t2.c1`：
+
+```yaml
+columns:
+  - name: t_int
+    # format: "1{{%6d}}"
+    gen:
+      ref: employees.department_id
+      limit: 100  # 随机选择 100 个值（默认 1000）
+
+  - name: t_struct # struct<dp_id:int, name:text>
+    fields:
+      - name: dp_id
+        gen:
+          ref: employees.department_id # ref can be used in nested rules
+      - name: name
+        gen:
+          ref: employees.name
+```
+
+> [!IMPORTANT]
+>
+> - 引用的源表必须一起生成
+> - 引用之间不能有死锁
+
 ##### enum
 
 枚举生成器，从给定值中随机选择，枚举值可以是字面量或者生成规则：
@@ -348,11 +393,13 @@ columns:
 
   - name: t_str
     gen:
-      # 随机选择一个生成规则来生成值，各有 1/4 的概率被选中
+      # 随机选择一个生成规则来生成值，各有 1/5 的概率被选中
       enum:
         - length: 5
         - length: {min: 5, max: 10}
         - format: "my name is {{username}}"
+        - gen:
+            ref: t1.c1
         - gen:
             enum: [1, 2, 3]
 
@@ -393,34 +440,6 @@ columns:
         - gen:
             enum: [2, 4, 6, 8, 10]
 ```
-
-##### ref
-
-引用生成器，随机使用其他表的列的值。
-一般在用于关系列之间，比如 `t1 JOIN t2 ON t1.c1 = t2.c1` 或 `WHERE t1.c1 = t2.c1`：
-
-```yaml
-columns:
-  - name: t_int
-    # format: "1{{%6d}}"
-    gen:
-      ref: employees.department_id
-      limit: 100  # 随机选择 100 个值（默认 1000）
-
-  - name: t_struct # struct<dp_id:int, name:text>
-    fields:
-      - name: dp_id
-        gen:
-          ref: employees.department_id
-      - name: name
-        gen:
-          ref: employees.name
-```
-
-> [!IMPORTANT]
->
-> - 引用的源表必须一起生成
-> - 引用之间不能有死锁
 
 ##### type
 
