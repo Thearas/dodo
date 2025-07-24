@@ -22,5 +22,6 @@ sd '^「example」$' "$example" gendata.xml.new
 sd '^「tables」$' "$example_tables" gendata.xml.new
 sd '^「column-stats」$' "$example_stats" gendata.xml.new
 sd '^「format-tags」$' "$format_tags" gendata.xml.new
+sd '\]\(.*\)' ']' gendata.xml.new # remove Markdown links
 mv gendata.xml gendata.xml.old || true
 mv gendata.xml.new gendata.xml

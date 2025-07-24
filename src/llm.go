@@ -75,8 +75,8 @@ func LLMGendataConfig(
 	stop.SetExtraFields(map[string]any{"prefix": true})
 	c := client.Chat.Completions.NewStreaming(ctx, openai.ChatCompletionNewParams{
 		Model:       model,
-		Temperature: openai.Float(0.3),
-		TopP:        openai.Float(0.85),
+		Temperature: openai.Float(0.1),
+		TopP:        openai.Float(0.9),
 		Stop:        stop,
 		Messages: []openai.ChatCompletionMessageParamUnion{
 			openai.SystemMessage(prompt.Gendata),
