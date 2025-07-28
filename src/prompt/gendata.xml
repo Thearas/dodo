@@ -256,9 +256,9 @@ columns:
 
 ##### parts
 
-Must be used together with [`format`]. Flexibly combine multiple values ​​to produce the final result.
+Must be used together with [`format`]. Flexibly combine multiple values ​to produce the final result.
 
-`parts` generates multiple values ​​at a time and fills them into `{{%xxx}}` of [`format`]:
+`parts` generates multiple values ​at a time and fills them into `{{%xxx}}` of [`format`]:
 
 ```yaml
 columns:
@@ -307,7 +307,7 @@ columns:
 
 ##### golang
 
-P.s. This feature should be used exclusively as a last resort due to its poor readability – strongly consider using alternative functionality instead.
+P.s. This feature should be used exclusively as a last resort due to its poor readability - strongly consider using alternative functionality instead.
 
 Uses Go code for a custom generator, supports Go stdlib:
 

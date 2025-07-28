@@ -10,7 +10,7 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
-// go test -timeout 600s -run ^TestLLMGendataConfig$ github.com/Thearas/dodo/src
+// go test -v -timeout 600s -run ^TestLLMGendataConfig$ github.com/Thearas/dodo/src
 func TestLLMGendataConfig(t *testing.T) {
 	apikey := os.Getenv("DORIS_DEEPSEEK_API_KEY")
 	if apikey == "" {

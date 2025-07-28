@@ -21,7 +21,7 @@ run:
 	@go run main.go $(ARGS)
 
 test:
-	@go test -v ./...
+	@go test -v -timeout 600s ./...
 
 install: build
 	cp dodo /usr/local/bin
