@@ -1,6 +1,6 @@
 module github.com/Thearas/dodo
 
-go 1.24.4
+go 1.25.0
 
 require (
 	github.com/antlr4-go/antlr/v4 v4.13.1
@@ -27,10 +27,10 @@ require (
 	github.com/traefik/yaegi v0.16.1
 	github.com/valyala/fasttemplate v1.2.2
 	github.com/zeebo/blake3 v0.2.4
-	golang.org/x/crypto v0.35.0
+	golang.org/x/crypto v0.52.0
 	golang.org/x/exp v0.0.0-20240823005443-9b4947da3948
-	golang.org/x/sync v0.16.0
-	golang.org/x/text v0.27.0
+	golang.org/x/sync v0.20.0
+	golang.org/x/text v0.37.0
 	gopkg.in/yaml.v3 v3.0.1
 )
 
@@ -58,6 +58,6 @@ require (
 	github.com/tidwall/sjson v1.2.5 // indirect
 	github.com/valyala/bytebufferpool v1.0.0 // indirect
 	go.uber.org/multierr v1.11.0 // indirect
-	golang.org/x/sys v0.33.0 // indirect
+	golang.org/x/sys v0.45.0 // indirect
 	gopkg.in/ini.v1 v1.67.0 // indirect
 )
