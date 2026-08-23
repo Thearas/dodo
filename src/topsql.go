@@ -17,6 +17,7 @@ package src
 
 import (
 	"bytes"
+	"cmp"
 	"context"
 	"encoding/json"
 	"errors"
@@ -26,6 +27,7 @@ import (
 	"path/filepath"
 	"regexp"
 	"runtime"
+	"slices"
 	"sort"
 	"strings"
 	"time"
@@ -465,27 +467,27 @@ func TopSql(ctx context.Context, sqlFiles []string, topN int, sortBy TopSqlSortB
 func sortPatterns(patterns []*SQLPattern, sortBy TopSqlSortBy) {
 	switch sortBy {
 	case SortByComplexity:
-		sort.Slice(patterns, func(i, j int) bool {
-			if patterns[i].Complexity.Score != patterns[j].Complexity.Score {
-				return patterns[i].Complexity.Score > patterns[j].Complexity.Score
+		slices.SortFunc(patterns, func(a, b *SQLPattern) int {
+			if a.Complexity.Score != b.Complexity.Score {
+				return cmp.Compare(b.Complexity.Score, a.Complexity.Score)
 			}
-			return patterns[i].Count > patterns[j].Count
+			return cmp.Compare(b.Count, a.Count)
 		})
 	case SortByCombined:
-		sort.Slice(patterns, func(i, j int) bool {
-			scoreI := patterns[i].Count * patterns[i].Complexity.Score
-			scoreJ := patterns[j].Count * patterns[j].Complexity.Score
+		slices.SortFunc(patterns, func(a, b *SQLPattern) int {
+			scoreI := a.Count * a.Complexity.Score
+			scoreJ := b.Count * b.Complexity.Score
 			if scoreI != scoreJ {
-				return scoreI > scoreJ
+				return cmp.Compare(scoreJ, scoreI)
 			}
-			return patterns[i].Count > patterns[j].Count
+			return cmp.Compare(b.Count, a.Count)
 		})
 	default: // SortByCount
-		sort.Slice(patterns, func(i, j int) bool {
-			if patterns[i].Count != patterns[j].Count {
-				return patterns[i].Count > patterns[j].Count
+		slices.SortFunc(patterns, func(a, b *SQLPattern) int {
+			if a.Count != b.Count {
+				return cmp.Compare(b.Count, a.Count)
 			}
-			return patterns[i].Complexity.Score > patterns[j].Complexity.Score
+			return cmp.Compare(b.Complexity.Score, a.Complexity.Score)
 		})
 	}
 }

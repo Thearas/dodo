@@ -300,6 +300,7 @@ func GetBaseType(type_ IDataTypeContext) (t string) {
 		t = "AGG_STATE"
 	case *PrimitiveDataTypeContext:
 		t = ty.PrimitiveColType().GetType_().GetText()
+	default:
 	}
 	return strings.ToUpper(strings.TrimSpace(t))
 }

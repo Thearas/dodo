@@ -20,7 +20,7 @@ test:
 	@go test -v ./...
 
 install: build
-	cp dodo /usr/local/bin
+	install dodo /usr/local/bin
 
 gen: gen-parser gen-prompt
 
@@ -35,7 +35,7 @@ fmt:
 	@goimports -l -w -local "github.com/Thearas/dodo" .
 
 lint:
-	@golangci-lint run
+	@golangci-lint run --allow-parallel-runners
 
 addcmd:
 	cobra-cli --license apache --author "Thearas thearas850@gmail.com" add $(ARGS)

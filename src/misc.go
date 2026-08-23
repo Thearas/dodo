@@ -349,6 +349,11 @@ func CompressTarGz(srcDir, destPath string, parallel int) error {
 	gw.SetConcurrency(2*1024*1024, parallel)
 	tw := tar.NewWriter(gw)
 	defer tw.Close()
+	srcRoot, err := os.OpenRoot(srcDir)
+	if err != nil {
+		return err
+	}
+	defer srcRoot.Close()
 
 	// Walk through the source directory
 	baseDir := filepath.Base(srcDir)
@@ -372,7 +377,7 @@ func CompressTarGz(srcDir, destPath string, parallel int) error {
 			symlinkTarget string
 		)
 		if isSymlink {
-			symlinkTarget, err = os.Readlink(path)
+			symlinkTarget, err = srcRoot.Readlink(relPath)
 			if err != nil {
 				return err
 			}
@@ -392,7 +397,7 @@ func CompressTarGz(srcDir, destPath string, parallel int) error {
 		if isSymlink || info.IsDir() {
 			return nil
 		}
-		srcFile, err := os.Open(path)
+		srcFile, err := srcRoot.Open(relPath)
 		if err != nil {
 			return fmt.Errorf("failed to open source file: %w", err)
 		}

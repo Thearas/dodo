@@ -531,7 +531,8 @@ func (dm *DeployManager) deployFE(ctx context.Context, feNode, feConf string, ex
 
 	// Backup original fe.conf -> fe.conf.dodo.orig,
 	// then modify fe.conf
-	commands := []string{
+	commands := make([]string, 0, 6)
+	commands = append(commands,
 		// stop fe
 		fmt.Sprintf("sh '%s' || true", feStopCmdPath),
 
@@ -542,7 +543,7 @@ func (dm *DeployManager) deployFE(ctx context.Context, feNode, feConf string, ex
 		fmt.Sprintf("[ -f '%s' ] || cp '%s' '%s'", feOrigConfPath, feConfPath, feOrigConfPath),
 		fmt.Sprintf("mv '%s' '%s.bak' && cp '%s' '%s'", feConfPath, feConfPath, feOrigConfPath, feConfPath),
 		fmt.Sprintf("cat >> '%s' << 'EOF'\n%s\nEOF", feConfPath, feConf),
-	}
+	)
 
 	// Start FE
 	commands = append(commands, fmt.Sprintf("export JAVA_HOME=%s && sh %s --daemon %s", dm.config.JavaHome, feStartCmdPath, strings.Join(extraArgs, " ")))
@@ -580,11 +581,12 @@ func (dm *DeployManager) deployBE(ctx context.Context, beNode, beConf string) er
 
 	// Backup original be.conf -> be.conf.dodo.orig,
 	// then modify be.conf
-	commands := []string{
+	commands := make([]string, 0, 4)
+	commands = append(commands,
 		fmt.Sprintf("[ -f '%s' ] || cp '%s' '%s'", beOrigConfPath, beConfPath, beOrigConfPath),
 		fmt.Sprintf("mv '%s' '%s.bak' && cp '%s' '%s'", beConfPath, beConfPath, beOrigConfPath, beConfPath),
 		fmt.Sprintf("cat >> '%s' << 'EOF'\n%s\nEOF", beConfPath, beConf),
-	}
+	)
 
 	// Start BE
 	commands = append(commands, fmt.Sprintf("sysctl -w vm.max_map_count=2000000 && ulimit -n 65535 && export JAVA_HOME=%s && sh %s --daemon", dm.config.JavaHome, beStartCmdPath))

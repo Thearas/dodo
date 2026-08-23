@@ -224,6 +224,11 @@ func diffDumpSQL(replay string) error {
 	if !rstats.IsDir() {
 		return errors.New("replay result should be a directory")
 	}
+	replayRoot, err := os.OpenRoot(replay)
+	if err != nil {
+		return err
+	}
+	defer replayRoot.Close()
 
 	clientCount, err := guessClientCount(replay)
 	if err != nil {
@@ -250,7 +255,11 @@ func diffDumpSQL(replay string) error {
 			return nil
 		}
 
-		f2, err := os.Open(path2)
+		relPath, err := filepath.Rel(replay, path2)
+		if err != nil {
+			return err
+		}
+		f2, err := replayRoot.Open(relPath)
 		if err != nil {
 			return err
 		}
@@ -314,6 +323,16 @@ func diffTwoReplays(replay1, replay2 string) error {
 	if !lstats.IsDir() || !rstats.IsDir() {
 		return errors.New("paths should be both directory")
 	}
+	replay1Root, err := os.OpenRoot(replay1)
+	if err != nil {
+		return err
+	}
+	defer replay1Root.Close()
+	replay2Root, err := os.OpenRoot(replay2)
+	if err != nil {
+		return err
+	}
+	defer replay2Root.Close()
 
 	return filepath.WalkDir(replay1, func(path1 string, d os.DirEntry, err error) error {
 		if err != nil {
@@ -325,14 +344,22 @@ func diffTwoReplays(replay1, replay2 string) error {
 
 		relativePath := strings.TrimPrefix(path1, replay1)
 		path2 := filepath.Join(replay2, relativePath)
+		relPath1, err := filepath.Rel(replay1, path1)
+		if err != nil {
+			return err
+		}
+		relPath2, err := filepath.Rel(replay2, path2)
+		if err != nil {
+			return err
+		}
 
-		f1, err := os.Open(path1)
+		f1, err := replay1Root.Open(relPath1)
 		if err != nil {
 			return err
 		}
 		defer f1.Close()
 		scan1 := bufio.NewScanner(f1)
-		f2, err := os.Open(path2)
+		f2, err := replay2Root.Open(relPath2)
 		if err != nil {
 			return err
 		}

@@ -12,8 +12,6 @@ Main features:
 > [!IMPORTANT]
 > **See [Introduction & FAQ](./introduction.md) / [中文版](./introduction-zh.md) for more details.**
 
-[![demo](https://asciinema.org/a/706093.svg)](https://asciinema.org/a/706093)
-
 ## Install
 
 ```sh

@@ -319,7 +319,7 @@ func (s *AuditLogScanner) ScanOne(oneLog []byte) error {
 		// not a valid kv after stmt, append to stmt
 		if lastCapIdx == auditCapKeys["Stmt"] && !auditKeysMayAfterStmt[key] {
 			// append to the stmt
-			caps[lastCapIdx] += "|" + *(*string)(unsafe.Pointer(&kv))
+			caps[lastCapIdx] += "|" + *(*string)(unsafe.Pointer(&kv)) //nolint:gosec
 			continue
 		}
 		lastCapIdx = -1

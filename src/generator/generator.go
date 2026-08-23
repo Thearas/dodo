@@ -597,6 +597,8 @@ func (v *ColumnVisitor) GetLength() (minVal, maxVal int) {
 		minVal, maxVal = length, length
 	case GenRule:
 		minVal, maxVal = cast.ToInt(l["min"]), cast.ToInt(l["max"])
+	default:
+		logrus.Fatalf("invalid length rule type %T for column '%s'", l, v.Colpath)
 	}
 	if maxVal < minVal {
 		logrus.Debugf("length max(%d) < min(%d), set max to min for column '%s'", maxVal, minVal, v.Colpath)

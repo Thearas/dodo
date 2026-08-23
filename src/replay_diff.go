@@ -3,10 +3,11 @@ package src
 import (
 	"bufio"
 	"bytes"
+	"cmp"
 	"fmt"
 	"os"
 	"path/filepath"
-	"sort"
+	"slices"
 	"strings"
 
 	"github.com/fatih/color"
@@ -47,7 +48,7 @@ func (s *PatternStats) Finalize() {
 		return
 	}
 
-	sort.Slice(s.durations, func(i, j int) bool { return s.durations[i] < s.durations[j] })
+	slices.Sort(s.durations)
 
 	s.P50 = percentile(s.durations, 0.50)
 	s.P95 = percentile(s.durations, 0.95)
@@ -337,8 +338,8 @@ func DiffReplayAggregate(before, after map[uint64]*PatternStats) []DiffPatternSt
 	}
 
 	for i := range diffs {
-		sort.Slice(diffs[i].QueryMismatches, func(a, b int) bool {
-			return diffs[i].QueryMismatches[a].QueryId < diffs[i].QueryMismatches[b].QueryId
+		slices.SortFunc(diffs[i].QueryMismatches, func(a, b QueryMismatchDetail) int {
+			return cmp.Compare(a.QueryId, b.QueryId)
 		})
 	}
 
@@ -349,20 +350,20 @@ func DiffReplayAggregate(before, after map[uint64]*PatternStats) []DiffPatternSt
 func SortDiffPatternStats(diffs []DiffPatternStats, sortBy AggregateSortBy) {
 	switch sortBy {
 	case AggregateSortByP95Change:
-		sort.Slice(diffs, func(i, j int) bool {
-			return p95ChangeAbs(diffs[i]) > p95ChangeAbs(diffs[j])
+		slices.SortFunc(diffs, func(a, b DiffPatternStats) int {
+			return cmp.Compare(p95ChangeAbs(b), p95ChangeAbs(a))
 		})
 	case AggregateSortByP50Change:
-		sort.Slice(diffs, func(i, j int) bool {
-			return p50ChangeAbs(diffs[i]) > p50ChangeAbs(diffs[j])
+		slices.SortFunc(diffs, func(a, b DiffPatternStats) int {
+			return cmp.Compare(p50ChangeAbs(b), p50ChangeAbs(a))
 		})
 	case AggregateSortByAvgChange:
-		sort.Slice(diffs, func(i, j int) bool {
-			return avgChangeAbs(diffs[i]) > avgChangeAbs(diffs[j])
+		slices.SortFunc(diffs, func(a, b DiffPatternStats) int {
+			return cmp.Compare(avgChangeAbs(b), avgChangeAbs(a))
 		})
 	case AggregateSortByCount:
-		sort.Slice(diffs, func(i, j int) bool {
-			return maxCount(diffs[i]) > maxCount(diffs[j])
+		slices.SortFunc(diffs, func(a, b DiffPatternStats) int {
+			return cmp.Compare(maxCount(b), maxCount(a))
 		})
 	default:
 		SortDiffPatternStats(diffs, AggregateSortByP95Change)
@@ -373,14 +374,14 @@ func SortDiffPatternStats(diffs []DiffPatternStats, sortBy AggregateSortBy) {
 func SortPatternStats(stats []*PatternStats, sortBy AggregateSortBy) {
 	switch sortBy {
 	case AggregateSortByCount:
-		sort.Slice(stats, func(i, j int) bool { return stats[i].Count > stats[j].Count })
+		slices.SortFunc(stats, func(a, b *PatternStats) int { return cmp.Compare(b.Count, a.Count) })
 	case AggregateSortByP50Change:
-		sort.Slice(stats, func(i, j int) bool { return stats[i].P50 > stats[j].P50 })
+		slices.SortFunc(stats, func(a, b *PatternStats) int { return cmp.Compare(b.P50, a.P50) })
 	case AggregateSortByAvgChange:
-		sort.Slice(stats, func(i, j int) bool { return stats[i].Avg > stats[j].Avg })
+		slices.SortFunc(stats, func(a, b *PatternStats) int { return cmp.Compare(b.Avg, a.Avg) })
 	default:
 		// default to p95
-		sort.Slice(stats, func(i, j int) bool { return stats[i].P95 > stats[j].P95 })
+		slices.SortFunc(stats, func(a, b *PatternStats) int { return cmp.Compare(b.P95, a.P95) })
 	}
 }
 

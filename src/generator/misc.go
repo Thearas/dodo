@@ -216,7 +216,8 @@ func CastMinMax[R CastType](min_, max_ any, baseType, colpath string, errmsg ...
 	case time.Time:
 		minBigger = any(maxVal).(time.Time).Before(any(minVal).(time.Time))
 	case big.Int:
-		minBigger = any(minVal).(*big.Int).Cmp(any(maxVal).(*big.Int)) == -1
+		minBigger = any(maxVal).(*big.Int).Cmp(any(minVal).(*big.Int)) == -1
+	default:
 	}
 	if minBigger {
 		maxVal_, err := MinMaxVal[R](false)
