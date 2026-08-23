@@ -399,10 +399,10 @@ func FormatSingleAggregate(stats map[uint64]*PatternStats, sortBy AggregateSortB
 	totalCount := lo.SumBy(lo.Values(stats), func(s *PatternStats) int { return s.Count })
 	totalErrors := lo.SumBy(lo.Values(stats), func(s *PatternStats) int { return s.ErrorCount })
 
-	fmt.Fprintf(&buf, "\n%s\n", strings.Repeat("=", 100))
-	fmt.Fprintf(&buf, "Replay Aggregate Statistics (%d patterns, %d total queries, %d errors)\n",
+	_, _ = fmt.Fprintf(&buf, "\n%s\n", strings.Repeat("=", 100))
+	_, _ = fmt.Fprintf(&buf, "Replay Aggregate Statistics (%d patterns, %d total queries, %d errors)\n",
 		len(stats), totalCount, totalErrors)
-	fmt.Fprintf(&buf, "%s\n\n", strings.Repeat("=", 100))
+	_, _ = fmt.Fprintf(&buf, "%s\n\n", strings.Repeat("=", 100))
 
 	// Header
 	fmt.Fprintf(&buf, "%-4s %16s %8s %8s %8s %8s %8s %10s  %s\n",
@@ -537,8 +537,8 @@ func FormatDiffAggregateDetailed(diffs []DiffPatternStats, sortBy AggregateSortB
 
 	var buf bytes.Buffer
 
-	buf.WriteString(FormatDiffAggregate(diffs, sortBy, len(diffs), false))
-	buf.WriteString("\nDetailed SQL Samples\n")
+	_, _ = buf.WriteString(FormatDiffAggregate(diffs, sortBy, len(diffs), false))
+	_, _ = buf.WriteString("\nDetailed SQL Samples\n")
 	buf.WriteString(strings.Repeat("=", 130))
 	buf.WriteString("\n")
 

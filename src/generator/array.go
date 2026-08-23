@@ -39,7 +39,7 @@ func (g *ArrayGen) Gen(c *GenContext) any {
 
 	b := &bytes.Buffer{}
 	if g.insertOrCSV {
-		b.WriteString("array(")
+		_, _ = b.WriteString("array(")
 	} else {
 		b.WriteByte('[')
 	}
