@@ -405,9 +405,9 @@ func FormatSingleAggregate(stats map[uint64]*PatternStats, sortBy AggregateSortB
 	_, _ = fmt.Fprintf(&buf, "%s\n\n", strings.Repeat("=", 100))
 
 	// Header
-	fmt.Fprintf(&buf, "%-4s %16s %8s %8s %8s %8s %8s %10s  %s\n",
+	_, _ = fmt.Fprintf(&buf, "%-4s %16s %8s %8s %8s %8s %8s %10s  %s\n",
 		"#", "PatternHash", "Count", "Errors", "P50(ms)", "P95(ms)", "Max(ms)", "Avg(ms)", "Sample QueryId")
-	fmt.Fprintf(&buf, "%s\n", strings.Repeat("-", 100))
+	_, _ = fmt.Fprintf(&buf, "%s\n", strings.Repeat("-", 100))
 
 	for i, s := range list {
 		errRateStr := fmt.Sprintf("%d(%.0f%%)", s.ErrorCount, s.ErrorRate*100)
@@ -417,7 +417,7 @@ func FormatSingleAggregate(stats map[uint64]*PatternStats, sortBy AggregateSortB
 			s.SampleQueryId)
 	}
 
-	fmt.Fprintf(&buf, "%s\n", strings.Repeat("-", 100))
+	_, _ = fmt.Fprintf(&buf, "%s\n", strings.Repeat("-", 100))
 
 	return buf.String()
 }
@@ -539,44 +539,44 @@ func FormatDiffAggregateDetailed(diffs []DiffPatternStats, sortBy AggregateSortB
 
 	_, _ = buf.WriteString(FormatDiffAggregate(diffs, sortBy, len(diffs), false))
 	_, _ = buf.WriteString("\nDetailed SQL Samples\n")
-	buf.WriteString(strings.Repeat("=", 130))
-	buf.WriteString("\n")
+	_, _ = buf.WriteString(strings.Repeat("=", 130))
+	_, _ = buf.WriteString("\n")
 
 	for i, d := range diffs {
-		fmt.Fprintf(&buf, "\n#%d PatternHash: %d\n", i+1, d.PatternHash)
-		fmt.Fprintf(&buf, "Before: %s\n", formatPatternStatsForDetail(d.Before))
-		fmt.Fprintf(&buf, "After : %s\n", formatPatternStatsForDetail(d.After))
+		_, _ = fmt.Fprintf(&buf, "\n#%d PatternHash: %d\n", i+1, d.PatternHash)
+		_, _ = fmt.Fprintf(&buf, "Before: %s\n", formatPatternStatsForDetail(d.Before))
+		_, _ = fmt.Fprintf(&buf, "After : %s\n", formatPatternStatsForDetail(d.After))
 		if len(d.QueryMismatches) > 0 {
-			fmt.Fprintf(&buf, "Result mismatches: rows=%d hash=%d\n", d.RowsDiffCount, d.HashDiffCount)
+			_, _ = fmt.Fprintf(&buf, "Result mismatches: rows=%d hash=%d\n", d.RowsDiffCount, d.HashDiffCount)
 			for _, mismatch := range d.QueryMismatches {
-				fmt.Fprintf(&buf, "QueryId: %s\n", mismatch.QueryId)
+				_, _ = fmt.Fprintf(&buf, "QueryId: %s\n", mismatch.QueryId)
 				if mismatch.BeforePattern != mismatch.AfterPattern {
-					fmt.Fprintf(&buf, "PatternHash: %d -> %d\n", mismatch.BeforePattern, mismatch.AfterPattern)
+					_, _ = fmt.Fprintf(&buf, "PatternHash: %d -> %d\n", mismatch.BeforePattern, mismatch.AfterPattern)
 				}
 				if mismatch.RowsMismatch {
-					fmt.Fprintf(&buf, "Rows: %d -> %d\n", mismatch.BeforeRows, mismatch.AfterRows)
+					_, _ = fmt.Fprintf(&buf, "Rows: %d -> %d\n", mismatch.BeforeRows, mismatch.AfterRows)
 				}
 				if mismatch.HashMismatch {
-					fmt.Fprintf(&buf, "Hash: %s -> %s\n",
+					_, _ = fmt.Fprintf(&buf, "Hash: %s -> %s\n",
 						formatDetailValue(mismatch.BeforeRowsHash),
 						formatDetailValue(mismatch.AfterRowsHash))
 				}
 				if mismatch.SQLDiffers {
-					buf.WriteString("SQL differs\n")
-					buf.WriteString("SQL Before:\n")
-					buf.WriteString(formatSampleStmt(mismatch.BeforeStmt))
-					buf.WriteString("\n")
-					buf.WriteString("SQL After:\n")
-					buf.WriteString(formatSampleStmt(mismatch.AfterStmt))
-					buf.WriteString("\n")
+					_, _ = buf.WriteString("SQL differs\n")
+					_, _ = buf.WriteString("SQL Before:\n")
+					_, _ = buf.WriteString(formatSampleStmt(mismatch.BeforeStmt))
+					_, _ = buf.WriteString("\n")
+					_, _ = buf.WriteString("SQL After:\n")
+					_, _ = buf.WriteString(formatSampleStmt(mismatch.AfterStmt))
+					_, _ = buf.WriteString("\n")
 				}
 			}
 		}
-		buf.WriteString("Sample SQL:\n")
-		buf.WriteString(formatSampleStmt(pickSampleStmt(d)))
-		buf.WriteString("\n")
-		buf.WriteString(strings.Repeat("-", 154))
-		buf.WriteString("\n")
+		_, _ = buf.WriteString("Sample SQL:\n")
+		_, _ = buf.WriteString(formatSampleStmt(pickSampleStmt(d)))
+		_, _ = buf.WriteString("\n")
+		_, _ = buf.WriteString(strings.Repeat("-", 154))
+		_, _ = buf.WriteString("\n")
 	}
 
 	return buf.String()

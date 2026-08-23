@@ -41,20 +41,20 @@ func (g *ArrayGen) Gen(c *GenContext) any {
 	if g.insertOrCSV {
 		_, _ = b.WriteString("array(")
 	} else {
-		b.WriteByte('[')
+		_ = b.WriteByte('[')
 	}
 
 	for i := range length {
 		_, _ = g.writeVal(b, g.Element.Gen(c))
 		if i != length-1 {
-			b.WriteByte(',')
+			_ = b.WriteByte(',')
 		}
 	}
 
 	if g.insertOrCSV {
-		b.WriteByte(')')
+		_ = b.WriteByte(')')
 	} else {
-		b.WriteByte(']')
+		_ = b.WriteByte(']')
 	}
 
 	return json.RawMessage(b.Bytes())
