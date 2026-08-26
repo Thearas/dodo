@@ -182,7 +182,7 @@ func diffAggregate(args []string) error {
 		fileOutput = src.FormatDiffAggregateDetailed(diffs, sortBy, aggregateTopN)
 	}
 
-	fmt.Print(output)
+	_, _ = fmt.Print(output)
 
 	reportPath := aggregateOutput
 	if reportPath == "" && len(args) == 2 {

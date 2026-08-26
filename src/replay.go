@@ -626,8 +626,8 @@ func decodeSqls(f *os.File, db string, clientCount int) (map[string][]*ReplaySql
 		client2sqls   = make(map[string][]*ReplaySql, clientCount)
 		clientNameFmt = clientNameFormat(clientCount)
 
-		minTs = time.Now().UnixMilli()
-		i     = 0
+		minTsMs = time.Now().UnixMilli()
+		i       = 0
 	)
 
 	iter, err := sqlsplit.SplitFd(f)
@@ -642,7 +642,7 @@ func decodeSqls(f *os.File, db string, clientCount int) (map[string][]*ReplaySql
 		client := getClientBySqlIdx(clientNameFmt, clientCount, "", i)
 		client2sqls[client] = append(client2sqls[client], &ReplaySql{
 			ReplaySqlMeta: ReplaySqlMeta{
-				Ts:         minTs + int64(i),
+				Ts:         minTsMs + int64(i),
 				Client:     client,
 				User:       "unknown",
 				Db:         db,
@@ -654,5 +654,5 @@ func decodeSqls(f *os.File, db string, clientCount int) (map[string][]*ReplaySql
 		i++
 	}
 
-	return client2sqls, minTs, i, nil
+	return client2sqls, minTsMs, i, nil
 }

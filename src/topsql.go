@@ -713,6 +713,6 @@ func writeSampleFiles(outDir string, entries []sampleEntry) error {
 // hashString returns a 64-bit FNV-1a hash of the string
 func hashString(s string) uint64 {
 	h := fnv.New64a()
-	h.Write([]byte(s))
+	_, _ = h.Write([]byte(s))
 	return h.Sum64()
 }
