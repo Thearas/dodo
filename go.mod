@@ -1,6 +1,8 @@
 module github.com/Thearas/dodo
 
-go 1.27.0
+go 1.26.0
+
+toolchain go1.27.0
 
 require (
 	github.com/Thearas/sqlsplit v0.0.0-20251208130237-8e0a4b3cb5fb
